@@ -37,22 +37,11 @@ emoji 用来扫视分类，**模块、内容对象与具体目标负责区分任
 
 需要 **Python 3.10+**、已登录且支持 Hook 的 Codex，以及能够读取当前桌面存储格式的 CLI。macOS 已实测；Linux 未实机验证，Windows 与云端暂不支持。
 
-先克隆仓库，让 Codex 的 `plugin-creator` 将完整目录加入本地插件市场：
+直接把下面这段话发给 Codex，让它查找仓库并完成安装：
 
-```sh
-git clone https://github.com/oil-oil/oil-codex-title.git
+```text
+帮我查找 GitHub 仓库 oil-oil/oil-codex-title，下载并使用 plugin-creator 安装为完整的 Codex 插件（包含 Stop Hook，不要只安装 Skill）。请完成本地插件市场配置、启用 Hook，并运行 doctor 检查；如果需要我在界面中信任 Hook，请告诉我具体操作。
 ```
-
-可直接对 Codex 说：“使用 plugin-creator 安装本地 oil-codex-title 目录，作为包含 Stop Hook 的完整插件。”
-
-已经配置本地 `personal` 市场时：
-
-```sh
-codex plugin add oil-codex-title@personal
-codex features enable hooks
-```
-
-也可以让 Codex 的 `plugin-creator` 安装本目录。**不要只复制内部 Skill**：自动触发依赖插件里的 Hook。
 
 在 Codex 的 `/hooks` 或 Hook 管理入口检查并信任本插件的 Stop Hook，然后在一个新任务里验证。安装、启用、信任、实际触发、桌面显示是不同的检查项。
 
