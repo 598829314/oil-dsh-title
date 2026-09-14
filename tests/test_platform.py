@@ -7,12 +7,13 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 import oil_codex_title as app
-from codex_adapter import BackendError, windows_binary, find_codex
+from codex_adapter import BackendError, windows_binary, find_codex, generate_title
 
 ID = '12345678-1234-1234-1234-123456789012'
 
@@ -100,6 +101,19 @@ class PlatformTests(unittest.TestCase):
             capture_output=True, env=env, timeout=10)
         self.assertEqual(p.returncode,0,p.stderr.decode('utf-8'))
         self.assertEqual(json.loads(p.stdout.decode('utf-8'))['config']['label'],'中文 🧩｜标题')
+
+    def test_model_process_launch_accepts_windows_flags_and_unicode_json(self):
+        expected = {"action":"rename","title":"🧩 中文工具｜修复","reason":"目标明确"}
+        def fake_run(args, **kwargs):
+            self.assertEqual(kwargs["creationflags"], 0)
+            self.assertEqual(kwargs["encoding"], "utf-8")
+            self.assertEqual(json.loads(kwargs["input"])["original_goal"], "修复中文工具")
+            output = Path(args[args.index("--output-last-message")+1])
+            output.write_text(json.dumps(expected,ensure_ascii=False),encoding="utf-8")
+            return SimpleNamespace(returncode=0,stdout="")
+        with patch("codex_adapter.process_options", return_value={"creationflags":0}), patch("codex_adapter.subprocess.run", side_effect=fake_run):
+            candidate, _ = generate_title("codex.exe",app.DEFAULTS,{"current_title":"旧标题","original_goal":"修复中文工具"},ROOT)
+        self.assertEqual(candidate,expected)
 
     def test_fixture_evaluator_can_read_chinese_in_legacy_locale(self):
         env = os.environ | {'PYTHONUTF8':'0','PYTHONIOENCODING':'utf-8'}

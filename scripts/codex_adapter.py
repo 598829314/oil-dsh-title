@@ -220,7 +220,7 @@ def _generate_title_once(binary, config, context, plugin_root):
             args[2:2] = ["-c", "service_tier=" + json.dumps(config["service_tier"])]
         try:
             proc = subprocess.run(args, input=json.dumps(context, ensure_ascii=False),
-                                  capture_output=True, encoding="utf-8", env=worker_env(), **process_options(),
+                                  capture_output=True, encoding="utf-8", env=worker_env(),
                                   timeout=config["model_timeout_seconds"], **process_options())
         except subprocess.TimeoutExpired as exc:
             raise BackendError("独立命名模型超时；原标题保留") from exc
