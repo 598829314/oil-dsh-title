@@ -45,7 +45,7 @@ class FakeBackend:
 
 
 def proposal(_):
-    return {"action": "rename", "title": "🎬 产品视频讲解大纲", "reason": "主要目标已明确"}, {"input_tokens": 100}
+    return {"action": "rename", "title": "🎬 产品视频｜讲解大纲", "reason": "主要目标已明确"}, {"input_tokens": 100}
 
 
 class TitleTests(unittest.TestCase):
@@ -198,13 +198,13 @@ class TitleTests(unittest.TestCase):
         self.assertEqual(title.project_hint({'cwd': '/workspace/projects'}), '')
 
     def test_duplicate_candidate_retries_with_evidence(self):
-        title.atomic_json(title.state_path(self.root, NEW_TURN), {'last_seen_title': '🎬 产品视频讲解大纲'})
+        title.atomic_json(title.state_path(self.root, NEW_TURN), {'last_seen_title': '🎬 产品视频｜讲解大纲'})
         contexts = []
         def generate(context):
             contexts.append(context)
             if len(contexts) == 1:
                 return proposal(context)
-            return {'action': 'rename', 'title': '🎬 Maple 产品入门视频大纲', 'reason': '补充产品名'}, {'input_tokens': 80}
+            return {'action': 'rename', 'title': '🎬 Maple 产品入门视频｜大纲', 'reason': '补充产品名'}, {'input_tokens': 80}
         result = self.process(generate, apply=True)
         self.assertEqual(result['status'], 'renamed')
         self.assertEqual(result['usage']['input_tokens'], 180)
@@ -212,14 +212,14 @@ class TitleTests(unittest.TestCase):
         self.assertEqual(len(self.backend.writes), 1)
 
     def test_unresolved_duplicate_never_writes(self):
-        title.atomic_json(title.state_path(self.root, NEW_TURN), {'last_seen_title': '🎬 产品视频讲解大纲'})
+        title.atomic_json(title.state_path(self.root, NEW_TURN), {'last_seen_title': '🎬 产品视频｜讲解大纲'})
         self.assertEqual(self.process(apply=True)['status'], 'ambiguous_title')
         self.assertEqual(self.backend.writes, [])
 
     def test_same_title_in_different_project_is_allowed(self):
         self.backend.thread['cwd'] = '/workspace/maple'
         title.atomic_json(title.state_path(self.root, NEW_TURN), {
-            'last_seen_title': '🎬 产品视频讲解大纲', 'scope_key': 'other-project'})
+            'last_seen_title': '🎬 产品视频｜讲解大纲', 'scope_key': 'other-project'})
         calls = []
         def generate(context):
             calls.append(context)
@@ -275,6 +275,70 @@ class TitleTests(unittest.TestCase):
     def test_kept_project_prefix_is_not_cleaned_up(self):
         p = {'action':'keep','title':'🛠️ Maple 注册修复','reason':''}
         self.assertEqual(normalize_project_prefix(p, {'project_hint':'maple'}), p)
+
+    def test_structured_title_rejects_incomplete_or_multiple_parts(self):
+        for bad in ("🧩 邮箱注册修复", "🧩 邮箱注册|修复", "🧩 ｜修复",
+                    "🧩 邮箱注册｜", "🧩 邮箱注册｜修复｜测试", "🧩 邮箱注册 ｜修复",
+                    "🛠️ 邮箱注册｜修复"):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                title.validate_candidate({"action": "rename", "title": bad, "reason": ""}, "")
+
+    def test_legacy_keep_is_allowed_but_new_tool_category_is_valid(self):
+        old = "🛠️ 邮箱注册修复"
+        result = title.validate_candidate({"action": "keep", "title": "", "reason": "信息不足"}, old)
+        self.assertEqual(result["title"], old)
+        new = "🧩 邮箱注册｜修复"
+        self.assertEqual(title.validate_candidate({"action": "rename", "title": new, "reason": ""}, old)["title"], new)
+
+    def test_policy_upgrade_rechecks_history_once_without_bypassing_locks(self):
+        from unittest.mock import patch
+        with patch.object(title, "POLICY_VERSION", title.POLICY_VERSION - 1):
+            self.process(apply=True)
+        calls = []
+        def migrate(context):
+            calls.append(context)
+            return {"action": "keep", "title": context["current_title"], "reason": "准确"}, {}
+        self.assertEqual(self.process(migrate, apply=True)["status"], "kept")
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(self.process(migrate, apply=True)["status"], "unchanged")
+        self.assertEqual(len(calls), 1)
+
+    def test_legacy_keep_gets_one_bounded_format_review(self):
+        from unittest.mock import patch
+        context = {"current_title": "🔎 本地 Skill 清单梳理"}
+        old = {"action": "keep", "title": context["current_title"], "reason": "结构合规"}
+        new = {"action": "rename", "title": "📝 本地 Skill｜清单梳理", "reason": "格式迁移"}
+        with patch("codex_adapter._generate_title_once", side_effect=[(old, {"input_tokens": 10}), (new, {"input_tokens": 20})]) as call:
+            candidate, usage = generate_title("unused", {}, context, ROOT)
+        self.assertEqual(candidate, new)
+        self.assertEqual(usage["input_tokens"], 30)
+        self.assertEqual(call.call_count, 2)
+        self.assertIn("naming_feedback", call.call_args.args[2])
+
+    def test_format_review_does_not_force_uncertain_keep_or_loop(self):
+        from unittest.mock import patch
+        keep = {"action": "keep", "title": "待定", "reason": "信息不足"}
+        with patch("codex_adapter._generate_title_once", return_value=(keep, {"input_tokens": 10})) as call:
+            candidate, _ = generate_title("unused", {}, {"current_title": "待定"}, ROOT)
+        self.assertEqual(candidate, keep)
+        self.assertEqual(call.call_count, 2)
+
+    def test_structured_keep_needs_no_format_retry(self):
+        from unittest.mock import patch
+        keep = {"action": "keep", "title": "📝 页面还原｜方法整理", "reason": "主线准确"}
+        with patch("codex_adapter._generate_title_once", return_value=(keep, {"input_tokens": 10})) as call:
+            generate_title("unused", {}, {"current_title": keep["title"]}, ROOT)
+        self.assertEqual(call.call_count, 1)
+
+    def test_format_review_shares_model_deadline(self):
+        from unittest.mock import patch
+        keep = {"action": "keep", "title": "旧标题", "reason": ""}
+        with patch("codex_adapter._generate_title_once", return_value=(keep, {"input_tokens": 10})) as call, patch("codex_adapter.time.monotonic", side_effect=[0, 90]):
+            generate_title("unused", {"model_timeout_seconds": 100}, {"current_title": "旧标题"}, ROOT)
+        self.assertEqual(call.call_args.args[1]["model_timeout_seconds"], 10)
+        with patch("codex_adapter._generate_title_once", return_value=(keep, {"input_tokens": 10})) as call, patch("codex_adapter.time.monotonic", side_effect=[0, 101]):
+            generate_title("unused", {"model_timeout_seconds": 100}, {"current_title": "旧标题"}, ROOT)
+        self.assertEqual(call.call_count, 1)
 
     def test_config_merges_unknown_fields(self):
         title.atomic_json(self.root / "config.json", {"model": "custom-model", "future": "preserved"})

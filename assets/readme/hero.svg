@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="440" viewBox="0 0 1200 440" role="img" aria-labelledby="title desc">
   <title id="title">Codex 话题实时命名，更好区分</title>
-  <desc id="desc">三组带 emoji 的合成标题对比：你好变成邮箱验证码过期排查，帮我看一下变成图像模型对比视频策划，继续修改变成登录表单布局优化。每轮对话结束后由独立 Luna Fast 判断。</desc>
+  <desc id="desc">三组带 emoji 的合成标题对比：你好变成邮箱验证码｜过期排查，帮我看一下变成图像模型对比｜视频策划，继续修改变成登录表单｜布局优化。每轮对话结束后由独立 Luna Fast 判断。</desc>
   <rect width="1200" height="440" rx="22" fill="#F4F3ED"/>
   <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,PingFang SC,sans-serif">
     <text x="40" y="40" font-size="20" font-weight="600" fill="#62766A">oil-codex-title</text>
@@ -35,14 +35,14 @@
       <rect x="12" y="110" width="660" height="44" rx="9" fill="#EFF2FA"/>
       <rect x="12" y="164" width="660" height="44" rx="9" fill="#F6EEF4"/>
       <g font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif" font-size="28">
-        <text x="24" y="88">🛠️</text>
+        <text x="24" y="88">🧩</text>
         <text x="24" y="142">🎬</text>
         <text x="24" y="196">🎨</text>
       </g>
       <g fill="#233D2F" font-size="29" font-weight="550">
-        <text x="72" y="88">邮箱验证码过期排查</text>
-        <text x="72" y="142">图像模型对比视频策划</text>
-        <text x="72" y="196">登录表单布局优化</text>
+        <text x="72" y="88">邮箱验证码｜过期排查</text>
+        <text x="72" y="142">图像模型对比｜视频策划</text>
+        <text x="72" y="196">登录表单｜布局优化</text>
       </g>
     </g>
     <text x="40" y="417" font-size="20" fill="#62766A">每轮结束后自动判断 · 参考最近 3～5 轮 · 命名消息不进入原对话</text>

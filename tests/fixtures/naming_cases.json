@@ -129,7 +129,7 @@
   {
     "id": "提交不是新目标",
     "context": {
-      "current_title": "🛠️ 邮箱注册修复",
+      "current_title": "🧩 邮箱注册｜修复",
       "project_hint": "maple",
       "original_goal": "修复邮箱注册",
       "recent_turns": [
@@ -168,13 +168,14 @@
       "reject": [
         "推送",
         "Maple"
-      ]
+      ],
+      "exact_title": "🧩 邮箱注册｜修复"
     }
   },
   {
     "id": "解释不是新目标",
     "context": {
-      "current_title": "🛠️ 支付回调幂等修复",
+      "current_title": "🧩 支付回调｜幂等修复",
       "project_hint": "maple",
       "original_goal": "修复支付回调重复发货",
       "recent_turns": [
@@ -203,7 +204,8 @@
       "contains": [],
       "reject": [
         "Maple"
-      ]
+      ],
+      "exact_title": "🧩 支付回调｜幂等修复"
     }
   },
   {
@@ -343,7 +345,7 @@
   {
     "id": "准确标题保持",
     "context": {
-      "current_title": "🎨 登录表单设计",
+      "current_title": "🎨 登录表单｜设计",
       "project_hint": "maple",
       "original_goal": "Maple 登录表单设计",
       "recent_turns": [
@@ -363,7 +365,8 @@
       "contains": [],
       "reject": [
         "Maple"
-      ]
+      ],
+      "exact_title": "🎨 登录表单｜设计"
     }
   },
   {
@@ -424,7 +427,7 @@
   {
     "id": "仅有继续",
     "context": {
-      "current_title": "🛠️ 注册校验修复",
+      "current_title": "🧩 注册校验｜修复",
       "project_hint": "maple",
       "original_goal": "修复 Maple 注册校验",
       "recent_turns": [
@@ -444,7 +447,8 @@
       "contains": [],
       "reject": [
         "Maple"
-      ]
+      ],
+      "exact_title": "🧩 注册校验｜修复"
     }
   },
   {
@@ -552,7 +556,7 @@
         }
       ],
       "conflicting_titles": [
-        "🎬 抖音视频重新发布"
+        "🎬 抖音视频｜重新发布"
       ]
     },
     "expected": {
@@ -617,7 +621,8 @@
         "video-publisher",
         "字幕"
       ],
-      "reject": []
+      "reject": [],
+      "emoji": "🧩"
     }
   },
   {
@@ -730,6 +735,173 @@
       "reject": [
         "rednote"
       ]
+    }
+  },
+  {
+    "id": "旧标题迁移保留主线",
+    "context": {
+      "current_title": "🛠️ 邮箱注册修复",
+      "project_hint": "",
+      "original_goal": "修复邮箱注册",
+      "recent_turns": [
+        {
+          "id": "1",
+          "messages": [
+            {
+              "role": "user",
+              "text": "补充验证码过期测试，然后提交推送"
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "action": "rename",
+      "contains": [],
+      "reject": [],
+      "exact_title": "🧩 邮箱注册｜修复"
+    }
+  },
+  {
+    "id": "视频修复仍属内容",
+    "context": {
+      "current_title": "🎬 Orion 评测视频制作",
+      "project_hint": "",
+      "original_goal": "修正这条 Orion 评测视频的结尾黑帧，继续制作这条视频",
+      "recent_turns": [
+        {
+          "id": "1",
+          "messages": [
+            {
+              "role": "user",
+              "text": "修正这条 Orion 评测视频的结尾黑帧，继续制作这条视频"
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "action": "rename",
+      "contains": [
+        "Orion"
+      ],
+      "reject": [],
+      "emoji": "🎬",
+      "object_contains": [
+        "Orion"
+      ]
+    }
+  },
+  {
+    "id": "工具修复不归视频",
+    "context": {
+      "current_title": "🛠️ clip-helper 字幕裁剪修复",
+      "project_hint": "",
+      "original_goal": "修复 clip-helper 工具代码里的字幕裁剪逻辑",
+      "recent_turns": [
+        {
+          "id": "1",
+          "messages": [
+            {
+              "role": "user",
+              "text": "修复 clip-helper 工具代码里的字幕裁剪逻辑"
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "action": "rename",
+      "contains": [
+        "裁剪"
+      ],
+      "reject": [],
+      "emoji": "🧩",
+      "object_contains": [
+        "clip-helper"
+      ]
+    }
+  },
+  {
+    "id": "方法整理不归页面设计",
+    "context": {
+      "current_title": "🎨 沉淀页面还原方法",
+      "project_hint": "",
+      "original_goal": "把页面还原经验整理成可复用的方法文档，不是实现页面",
+      "recent_turns": [
+        {
+          "id": "1",
+          "messages": [
+            {
+              "role": "user",
+              "text": "把页面还原经验整理成可复用的方法文档，不是实现页面"
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "action": "rename",
+      "contains": [],
+      "reject": [],
+      "emoji": "📝",
+      "object_contains": [
+        "还原"
+      ]
+    }
+  },
+  {
+    "id": "内容对象前置",
+    "context": {
+      "current_title": "🔎 对比 Atlas 与 Atlas Pro 模型",
+      "project_hint": "",
+      "original_goal": "对比 Atlas 与 Atlas Pro 模型的编码表现",
+      "recent_turns": [
+        {
+          "id": "1",
+          "messages": [
+            {
+              "role": "user",
+              "text": "对比 Atlas 与 Atlas Pro 模型的编码表现"
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "action": "rename",
+      "contains": [],
+      "reject": [],
+      "emoji": "🔎",
+      "object_contains": [
+        "Atlas",
+        "Atlas Pro"
+      ]
+    }
+  },
+  {
+    "id": "无分隔符迁移不扩写",
+    "context": {
+      "current_title": "🎨 登录表单设计",
+      "project_hint": "",
+      "original_goal": "设计登录表单",
+      "recent_turns": [
+        {
+          "id": "1",
+          "messages": [
+            {
+              "role": "user",
+              "text": "继续调整登录表单间距和提示文案"
+            }
+          ]
+        }
+      ]
+    },
+    "expected": {
+      "action": "rename",
+      "contains": [],
+      "reject": [],
+      "exact_title": "🎨 登录表单｜设计"
     }
   }
 ]

@@ -153,7 +153,7 @@ def normalize_project_prefix(candidate, context):
     return {**candidate, "title": emoji + " " + remaining}
 
 
-def generate_title(binary, config, context, plugin_root):
+def _generate_title_once(binary, config, context, plugin_root):
     # 只有问候/确认时没有命名证据；确定性保留，避免模型凭空生成“普通讨论”。
     trivial = {"", "你好", "您好", "hi", "hello", "嗨", "谢谢", "好的", "好", "ok", "收到", "继续", "嗯"}
     user_texts = [context.get("original_goal", "")] + [
@@ -206,3 +206,23 @@ def generate_title(binary, config, context, plugin_root):
             if item.get("type") in {"command_execution", "mcp_tool_call", "web_search"}:
                 raise BackendError("命名模型尝试调用工具，本次结果已丢弃")
         return normalize_project_prefix(result, context), usage
+
+
+def generate_title(binary, config, context, plugin_root):
+    deadline = time.monotonic() + config.get("model_timeout_seconds", 100)
+    candidate, usage = _generate_title_once(binary, config, context, plugin_root)
+    current = context.get("current_title", "")
+    legacy = current.count("｜") != 1 or current.startswith("🛠")
+    # 模型偶尔误把旧标题判断为结构合规。只复核一次，不自行猜对象或强制改名。
+    # 问候过滤不调用模型且无 usage，仍然直接保留。
+    remaining = deadline - time.monotonic()
+    if candidate.get("action") == "keep" and legacy and usage and remaining > 0:
+        # 格式复核共享首次生成的时间预算，不能使 Hook 的最坏耗时翻倍。
+        retry_config = {**config, "model_timeout_seconds": remaining}
+        candidate, retry_usage = _generate_title_once(binary, retry_config, {
+            **context,
+            "naming_feedback": "原标题尚未符合 emoji 对象｜目标结构，或仍使用旧开发图标。请重新核对：有明确对象和目标时只迁移格式，保留准确主线；只有依据不足时 keep。不要误称旧格式已合规。",
+        }, plugin_root)
+        usage = {key: usage.get(key, 0) + retry_usage.get(key, 0)
+                 for key in usage.keys() | retry_usage.keys()}
+    return candidate, usage

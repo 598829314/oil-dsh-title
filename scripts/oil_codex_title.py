@@ -28,8 +28,8 @@ DEFAULTS = {
     "max_context_chars": 14000,
     "model_timeout_seconds": 100,
 }
-EMOJI = ("🎬", "🛠️", "🔎", "📝", "📅", "🎨", "⚙️", "💬")
-POLICY_VERSION = 4
+EMOJI = ("🎬", "🧩", "🔎", "📝", "📅", "🎨", "⚙️", "💬")
+POLICY_VERSION = 6
 
 
 def data_dir():
@@ -230,6 +230,10 @@ def validate_candidate(candidate, current_title):
         if not any(title.startswith(e + " ") for e in EMOJI):
             raise ValueError("标题缺少允许的类别 emoji")
         body = title.split(" ", 1)[1]
+        if body.count("｜") != 1 or "|" in body:
+            raise ValueError("标题必须采用对象｜目标结构")
+        if any(not part or part != part.strip() for part in body.split("｜")):
+            raise ValueError("标题对象与目标不能为空或带边缘空格")
         if (not body.strip() or any(e in body for e in EMOJI)
                 or any(0x1F000 <= ord(c) <= 0x1FAFF or 0x2600 <= ord(c) <= 0x27BF for c in body)):
             raise ValueError("标题正文无效或包含多个类别 emoji")

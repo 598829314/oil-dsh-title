@@ -35,6 +35,10 @@ def main():
             for word in expected['reject']:
                 if word.casefold() in candidate['title'].casefold(): errors.append('错误主线：'+word)
             if candidate['title'] in case['context'].get('conflicting_titles',[]): errors.append('未区分冲突')
+            if expected.get('exact_title') and candidate['title'] != expected['exact_title']: errors.append('稳定标题或迁移主线变化')
+            if expected.get('emoji') and not candidate['title'].startswith(expected['emoji']+' '): errors.append('产物类别不符')
+            for word in expected.get('object_contains', []):
+                if word.casefold() not in candidate['title'].split('｜')[0].casefold(): errors.append('对象未前置：'+word)
             return {'case': case['id'], **candidate, 'passed': not errors, 'errors':errors,
                     'seconds':round(time.monotonic()-start,2),'usage':usage}
         except Exception as exc:
@@ -43,7 +47,7 @@ def main():
         rows = list(pool.map(run,cases))
     report = {'model':DEFAULTS['model'],'service_tier':DEFAULTS['service_tier'],
               'cases':len(rows),'passed':sum(r['passed'] for r in rows),
-              'model_calls':sum(bool(r.get('usage')) for r in rows),
+              'model_cases':sum(bool(r.get('usage')) for r in rows),
               'median_seconds':round(statistics.median(r['seconds'] for r in rows),2),
               'notice':'确定性问候过滤与 Luna 命名的合成案例单次检查，不代表普遍准确率，也不验证桌面显示。',
               'results':rows}
