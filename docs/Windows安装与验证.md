@@ -1,6 +1,6 @@
 # Windows 安装与验证
 
-Windows 版本沿用 Python 实现，没有额外的文件锁依赖。当前已完成适配，自动化验收进行中；Windows 桌面端登录后的真实 Stop 触发、Luna 调用与列表刷新尚未实测。
+Windows 版本沿用 Python 实现，没有额外的文件锁依赖。当前已完成适配并通过自动化测试，官方 Codex CLI 的原生入口与 App Server 连接也已验证；Windows 桌面端登录后的真实 Stop 触发、Luna 调用与列表刷新尚未实测。
 
 ## 安装条件
 
@@ -30,6 +30,8 @@ py -3 scripts/oil_codex_title.py configure --codex-bin 'C:\Codex\codex.exe'
 ## 验收方式
 
 自动化矩阵覆盖 Windows 的 Python 3.10/3.13，以及 macOS/Linux 的 Python 3.13。程序测试不调用付费模型；Windows 另安装官方 Codex CLI，检查原生入口解析与 App Server 连接。
+
+2026-09-14 的四组环境均通过全部 54 项测试，结果见 [跨平台验收记录](https://github.com/oil-oil/oil-codex-title/actions/runs/34799381646)。Windows CLI 检查使用 codex-cli 0.154.0，App Server 连接成功；CI 没有登录账号，也没有加载桌面 Hook。
 
 账号环境中的最终检查仍需在 Windows Codex 中完成：新建正常话题、结束一轮有具体目标的对话、检查后台日志与实际显示标题，确认没有额外命名消息。没有这一步证据时，不宣称 Windows 桌面体验已经完整验收。
 
