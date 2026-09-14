@@ -1,0 +1,43 @@
+{
+  "model": "gpt-5.6-luna",
+  "service_tier": "priority",
+  "cases": 2,
+  "passed": 2,
+  "model_cases": 2,
+  "median_seconds": 18.79,
+  "notice": "确定性问候过滤与 Luna 命名的合成案例单次检查，不代表普遍准确率，也不验证桌面显示。",
+  "results": [
+    {
+      "case": "英文语言均衡保持",
+      "action": "keep",
+      "title": "🧩 Email verification｜Fix expiry",
+      "reason": "原标题准确，补充测试仍服务于过期修复主线",
+      "passed": true,
+      "errors": [],
+      "seconds": 15.96,
+      "usage": {
+        "input_tokens": 4754,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 104,
+        "reasoning_output_tokens": 58
+      }
+    },
+    {
+      "case": "提交不是新目标",
+      "action": "keep",
+      "title": "🧩 邮箱注册｜修复",
+      "reason": "标题已准确概括邮箱注册修复主线",
+      "passed": true,
+      "errors": [],
+      "seconds": 21.61,
+      "usage": {
+        "input_tokens": 4786,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 68,
+        "reasoning_output_tokens": 25
+      }
+    }
+  ]
+}

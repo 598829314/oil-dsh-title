@@ -1,0 +1,110 @@
+{
+  "model": "gpt-5.6-luna",
+  "service_tier": "priority",
+  "cases": 6,
+  "passed": 5,
+  "model_cases": 6,
+  "median_seconds": 20.09,
+  "notice": "确定性问候过滤与 Luna 命名的合成案例单次检查，不代表普遍准确率，也不验证桌面显示。",
+  "results": [
+    {
+      "case": "西班牙文单轮需求",
+      "action": "rename",
+      "title": "🧩 Código de verificación｜Corregir caducidad",
+      "reason": "原标题无主线信息，改为明确对象与目标",
+      "passed": true,
+      "errors": [],
+      "seconds": 24.68,
+      "usage": {
+        "input_tokens": 4651,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 125,
+        "reasoning_output_tokens": 76
+      }
+    },
+    {
+      "case": "中文偶尔英文不切换",
+      "action": "keep",
+      "title": "🧩 邮箱验证码｜过期修复",
+      "reason": "标题准确概括持续修复目标，格式与语言均合适",
+      "passed": true,
+      "errors": [],
+      "seconds": 24.44,
+      "usage": {
+        "input_tokens": 4704,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 88,
+        "reasoning_output_tokens": 39
+      }
+    },
+    {
+      "case": "英文偶尔中文不切换",
+      "action": "keep",
+      "title": "🧩 Email verification｜Fix expiry",
+      "reason": "标题结构合规，主线准确且语言匹配",
+      "passed": true,
+      "errors": [],
+      "seconds": 18.8,
+      "usage": {
+        "input_tokens": 4697,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 82,
+        "reasoning_output_tokens": 39
+      }
+    },
+    {
+      "case": "英文语言均衡保持",
+      "action": "rename",
+      "title": "🧩 Email verification｜Test code expiry",
+      "reason": "持续目标是补充验证码过期测试，原标题目标不符",
+      "passed": false,
+      "errors": [
+        "动作不符",
+        "稳定标题或迁移主线变化"
+      ],
+      "seconds": 17.93,
+      "usage": {
+        "input_tokens": 4674,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 123,
+        "reasoning_output_tokens": 77
+      }
+    },
+    {
+      "case": "提交不是新目标",
+      "action": "keep",
+      "title": "🧩 邮箱注册｜修复",
+      "reason": "主线仍是邮箱注册修复，测试与推送属于后续步骤",
+      "passed": true,
+      "errors": [],
+      "seconds": 21.39,
+      "usage": {
+        "input_tokens": 4700,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 80,
+        "reasoning_output_tokens": 31
+      }
+    },
+    {
+      "case": "旧标题迁移保留主线",
+      "action": "rename",
+      "title": "🧩 邮箱注册｜修复",
+      "reason": "保留邮箱注册主线并迁移为统一格式",
+      "passed": true,
+      "errors": [],
+      "seconds": 16.88,
+      "usage": {
+        "input_tokens": 4642,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 94,
+        "reasoning_output_tokens": 50
+      }
+    }
+  ]
+}
