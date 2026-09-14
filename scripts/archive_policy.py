@@ -122,7 +122,7 @@ def archive_context(thread):
                     original = text
         if messages and index >= len(turns) - 5:
             effective.append({"id": turn["id"], "messages": messages})
-    if not original:
+    if not original or not effective:
         return None
     context = {"current_title": thread.get("name") or "", "project_hint": project_hint(thread),
                "original_goal": original, "recent_turns": effective[-5:]}
@@ -245,6 +245,7 @@ def scan(backend, root, classifier=None, max_evaluations=10, *, scheduled=False)
                         if (protected(fresh, tid, fresh_cfg, guards(root, time.time()), root)
                                 or not fresh_info or fresh_info[1] != fingerprint):
                             raise ModelSkipped("stale")
+                        ensure_scan_active()
                     before_model()
                     # 先落盘再调用，崩溃/异常不会导致下一次无界重试。
                     state = {"fingerprint": fingerprint, "context_version": CONTEXT_VERSION,

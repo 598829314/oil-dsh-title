@@ -143,6 +143,18 @@ class TitleTests(unittest.TestCase):
         run.assert_not_called()
         self.assertEqual(result["status"], "archived")
 
+    def test_pause_during_slow_archive_probe_never_starts_model(self):
+        from unittest.mock import patch
+        def probe(*args):
+            title.atomic_json(self.root / "config.json", {"enabled": False})
+            return False
+        with patch.object(self.backend, "is_archived", side_effect=probe), patch("codex_adapter.subprocess.run") as run:
+            with self.assertRaises(title.ModelSkipped) as error:
+                title.limited_title("unused", self.root, self.config, {"original_goal": "设计表单"},
+                    before_model=lambda: title.ensure_title_active(self.backend, ID, self.root))
+        self.assertEqual(error.exception.status, "disabled")
+        run.assert_not_called()
+
     def test_apply_renames_only_metadata_and_deduplicates(self):
         turns = copy.deepcopy(self.backend.thread["turns"])
         self.assertEqual(self.process(apply=True)["status"], "renamed")

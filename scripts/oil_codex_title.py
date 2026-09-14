@@ -133,12 +133,12 @@ def limited_title(binary, root, config, context, *, before_model=None):
 
 
 def ensure_title_active(backend, thread_id, root):
+    if backend.is_archived(thread_id):
+        raise ModelSkipped("archived")
     if not load_config(root)["enabled"]:
         raise ModelSkipped("disabled")
     if read_json(state_path(root, thread_id)).get("locked"):
         raise ModelSkipped("locked")
-    if backend.is_archived(thread_id):
-        raise ModelSkipped("archived")
 
 
 def read_settled_thread(backend, thread_id, event_turn, timeout=5):
