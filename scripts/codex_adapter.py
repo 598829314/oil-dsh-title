@@ -19,6 +19,13 @@ class BackendError(RuntimeError):
     pass
 
 
+class ModelSkipped(BackendError):
+    """调用前发现状态已改变；不是模型失败，也不自动重试。"""
+    def __init__(self, status):
+        super().__init__(status)
+        self.status = status
+
+
 def process_options():
     # 隐藏后台 Codex 子进程的控制台窗口；不通过 shell 执行模型参数。
     return {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}
@@ -213,7 +220,7 @@ def normalize_project_prefix(candidate, context):
     return {**candidate, "title": emoji + " " + remaining}
 
 
-def _generate_title_once(binary, config, context, plugin_root):
+def _generate_title_once(binary, config, context, plugin_root, *, before_model=None):
     # 只有问候/确认时没有命名证据；确定性保留，避免模型凭空生成“普通讨论”。
     trivial = {"", "你好", "您好", "hi", "hello", "嗨", "谢谢", "好的", "好", "ok", "收到", "继续", "嗯"}
     user_texts = [context.get("original_goal", "")] + [
@@ -223,12 +230,14 @@ def _generate_title_once(binary, config, context, plugin_root):
     if all(re.sub(r"[\W_]+", "", text).casefold() in trivial for text in user_texts):
         return {"action": "keep", "title": context.get("current_title", ""),
                 "reason": "只有问候或确认，缺少新的命名依据"}, {}
-    result, usage = generate_json(binary, config, context, plugin_root / "prompts/naming.md", SCHEMA)
+    result, usage = generate_json(binary, config, context, plugin_root / "prompts/naming.md", SCHEMA,
+                                 before_model=before_model)
     return normalize_project_prefix(result, context), usage
 
 
-def generate_json(binary, config, context, policy, output_schema):
+def generate_json(binary, config, context, policy, output_schema, *, before_model=None):
     """隔离的无工具临时模型，供命名和归档评估共用。"""
+    deadline = time.monotonic() + config["model_timeout_seconds"]
     # 复用当前登录；不复制凭据，不恢复原会话，不保留独立会话记录。
     with tempfile.TemporaryDirectory(prefix="oil-codex-title-") as tmp:
         temp = Path(tmp)
@@ -250,10 +259,16 @@ def generate_json(binary, config, context, policy, output_schema):
         ]
         if config.get("service_tier"):
             args[2:2] = ["-c", "service_tier=" + json.dumps(config["service_tier"])]
+        # 配额等待和每次内部重试之后，紧接真实模型进程启动前复核。
+        if before_model:
+            before_model()
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise BackendError("状态复核已耗尽本次模型时间预算")
         try:
             proc = subprocess.run(args, input=json.dumps(context, ensure_ascii=False),
                                   capture_output=True, encoding="utf-8", env=worker_env(),
-                                  timeout=config["model_timeout_seconds"], **process_options())
+                                  timeout=remaining, **process_options())
         except subprocess.TimeoutExpired as exc:
             raise BackendError("独立命名模型超时；原标题保留") from exc
         if proc.returncode or not output.exists():
@@ -273,9 +288,9 @@ def generate_json(binary, config, context, policy, output_schema):
         return result, usage
 
 
-def generate_title(binary, config, context, plugin_root):
+def generate_title(binary, config, context, plugin_root, *, before_model=None):
     deadline = time.monotonic() + config.get("model_timeout_seconds", 100)
-    candidate, usage = _generate_title_once(binary, config, context, plugin_root)
+    candidate, usage = _generate_title_once(binary, config, context, plugin_root, before_model=before_model)
     current = context.get("current_title", "")
     legacy = current.count("｜") != 1 or current.startswith("🛠")
     # 模型偶尔误把旧标题判断为结构合规。只复核一次，不自行猜对象或强制改名。
@@ -287,7 +302,7 @@ def generate_title(binary, config, context, plugin_root):
         candidate, retry_usage = _generate_title_once(binary, retry_config, {
             **context,
             "naming_feedback": "原标题尚未符合 emoji 对象｜目标结构，或仍使用旧开发图标。请重新核对：有明确对象和目标时只迁移格式，保留准确主线；只有依据不足时 keep。不要误称旧格式已合规。",
-        }, plugin_root)
+        }, plugin_root, before_model=before_model)
         usage = {key: usage.get(key, 0) + retry_usage.get(key, 0)
                  for key in usage.keys() | retry_usage.keys()}
     return candidate, usage

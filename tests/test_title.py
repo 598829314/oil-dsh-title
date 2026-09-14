@@ -84,6 +84,65 @@ class TitleTests(unittest.TestCase):
         self.assertEqual(self.process(moved, apply=True)["status"], "archived")
         self.assertEqual(self.backend.writes, [])
 
+    def test_archive_or_pause_prevents_collision_retry(self):
+        from unittest.mock import Mock
+        for change in ("archive", "pause"):
+            with self.subTest(change=change):
+                self.backend.archived = False
+                title.atomic_json(self.root / "config.json", {"enabled": True})
+                title.atomic_json(title.state_path(self.root, "12345678-1234-1234-1234-123456789099"),
+                                  {"scope_key": "", "last_seen_title": proposal({})[0]["title"]})
+                def moved(context):
+                    if change == "archive":
+                        self.backend.archived = True
+                    else:
+                        title.atomic_json(self.root / "config.json", {"enabled": False})
+                    return proposal(context)
+                model = Mock(side_effect=moved)
+                result = self.process(model, apply=True)
+                self.assertEqual(result["status"], "archived" if change == "archive" else "disabled")
+                self.assertEqual(model.call_count, 1)
+                self.assertEqual(self.backend.writes, [])
+
+    def test_archive_or_pause_prevents_internal_format_retry(self):
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        for change in ("archive", "pause"):
+            with self.subTest(change=change):
+                self.backend.archived = False
+                title.atomic_json(self.root / "config.json", {"enabled": True})
+                def fake_run(args, **kwargs):
+                    output = Path(args[args.index("--output-last-message") + 1])
+                    output.write_text(json.dumps({"action": "keep", "title": "旧标题", "reason": "格式合规"}), encoding="utf-8")
+                    if change == "archive":
+                        self.backend.archived = True
+                    else:
+                        title.atomic_json(self.root / "config.json", {"enabled": False})
+                    return SimpleNamespace(returncode=0, stdout=json.dumps({"type": "turn.completed", "usage": {"input_tokens": 1}}))
+                def model(context):
+                    return title.limited_title("unused", self.root, self.config, context,
+                        before_model=lambda: title.ensure_title_active(self.backend, ID, self.root))
+                with patch("codex_adapter.subprocess.run", side_effect=fake_run) as run:
+                    result = self.process(model, apply=True)
+                self.assertEqual(run.call_count, 1)
+                self.assertEqual(result["status"], "archived" if change == "archive" else "disabled")
+                self.assertEqual(self.backend.writes, [])
+
+    def test_archive_while_waiting_for_naming_slot_never_starts_model(self):
+        from contextlib import contextmanager
+        from unittest.mock import patch
+        @contextmanager
+        def queued(*args):
+            self.backend.archived = True
+            yield True
+        def model(context):
+            return title.limited_title("unused", self.root, self.config, context,
+                before_model=lambda: title.ensure_title_active(self.backend, ID, self.root))
+        with patch.object(title, "worker_slot", queued), patch("codex_adapter.subprocess.run") as run:
+            result = self.process(model, apply=True)
+        run.assert_not_called()
+        self.assertEqual(result["status"], "archived")
+
     def test_apply_renames_only_metadata_and_deduplicates(self):
         turns = copy.deepcopy(self.backend.thread["turns"])
         self.assertEqual(self.process(apply=True)["status"], "renamed")

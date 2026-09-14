@@ -55,7 +55,7 @@ class ArchiveTests(unittest.TestCase):
         self.env.stop()
         self.tmp.cleanup()
 
-    def model(self, context):
+    def model(self, context, **kwargs):
         self.calls += 1
         return {"classification": "completed", "reason": "明确交付，未发现待办"}, {"input_tokens": 100}
 
@@ -100,7 +100,7 @@ class ArchiveTests(unittest.TestCase):
         self.assertFalse(archive.record_path(self.root, ID).exists())
 
     def test_failed_scan_leaves_no_repeated_model_attempt(self):
-        def interrupted(context):
+        def interrupted(context, **kwargs):
             self.calls += 1
             raise KeyboardInterrupt()
         with self.assertRaises(KeyboardInterrupt):
@@ -166,7 +166,7 @@ class ArchiveTests(unittest.TestCase):
     def test_open_and_uncertain_are_not_reassessed_daily(self):
         for category in ("open", "uncertain"):
             atomic_json(archive.record_path(self.root, ID), {})
-            def model(context):
+            def model(context, **kwargs):
                 self.calls += 1
                 return {"classification": category, "reason": "需要保留"}, {}
             self.assertFalse(self.scan(model)["candidates"])
@@ -174,7 +174,7 @@ class ArchiveTests(unittest.TestCase):
         self.assertEqual(self.calls, 2)
 
     def test_error_does_not_cause_paid_retry_on_next_run(self):
-        def failed(context):
+        def failed(context, **kwargs):
             self.calls += 1
             raise BackendError("模型失败")
         self.assertEqual(self.scan(failed)["counts"]["errors"], 1)
@@ -182,7 +182,7 @@ class ArchiveTests(unittest.TestCase):
         self.assertEqual(self.calls, 1)
 
     def test_threshold_crossing_reuses_same_classification(self):
-        def model(context):
+        def model(context, **kwargs):
             self.calls += 1
             return {"classification": "no_pending", "reason": "问答已回应"}, {}
         self.assertFalse(self.scan(model)["candidates"])
@@ -210,7 +210,7 @@ class ArchiveTests(unittest.TestCase):
         self.assertEqual(archive.check(self.backend, self.root, ID)["status"], "protected_or_archived")
 
     def test_archived_during_model_not_added_to_candidates(self):
-        def model(context):
+        def model(context, **kwargs):
             self.backend.archived = True
             return self.model(context)
         self.assertEqual(self.scan(model)["counts"]["stale"], 1)
@@ -225,6 +225,91 @@ class ArchiveTests(unittest.TestCase):
         self.assertEqual(len(list(b.list_threads(archived=True))), 1)
         self.assertEqual(len(calls), 2)
         self.assertTrue(all(c["archived"] for c in calls))
+
+    def test_pending_work_in_middle_and_tail_is_not_truncated(self):
+        text = "界面已交付。" + "检查通过。" * 110 + "待办：实现邮件发送。" + "布局说明。" * 100 + "待办：上线验收。"
+        self.backend.thread["turns"][0]["items"][-1]["text"] = text
+        def model(context, **kwargs):
+            self.assertEqual(context["recent_turns"][-1]["messages"][-1]["text"], text)
+            return {"classification": "open", "reason": "仍有明确待办"}, {}
+        self.assertFalse(self.scan(model)["candidates"])
+
+    def test_long_user_request_is_complete(self):
+        text = "请实施功能。" * 250 + "最后还需要完成部署。"
+        self.backend.thread["turns"][0]["items"][0]["content"][0]["text"] = text
+        context = archive.activity(self.backend.thread)[2]
+        self.assertEqual(context["original_goal"], text)
+        self.assertEqual(context["recent_turns"][0]["messages"][0]["text"], text)
+
+    def test_oversized_context_is_kept_without_model(self):
+        self.backend.thread["turns"][0]["items"][-1]["text"] = "说明" * archive.MAX_CONTEXT_CHARS
+        self.assertFalse(self.scan()["candidates"])
+        self.assertEqual(self.calls, 0)
+
+    def test_legacy_positive_cache_cannot_archive_or_charge_again(self):
+        self.scan()
+        path = archive.record_path(self.root, ID)
+        state = read_json(path)
+        state.pop("context_version")
+        atomic_json(path, state)
+        self.enable()
+        result = self.scan()
+        self.assertEqual(result["counts"]["legacy_kept"], 1)
+        self.assertFalse(result["candidates"])
+        self.assertEqual(self.calls, 1)
+        self.assertEqual(archive.check(self.backend, self.root, ID)["status"], "not_eligible")
+
+    def test_scheduled_scan_disabled_never_lists_or_calls(self):
+        with patch.object(self.backend, "list_threads") as listing:
+            result = archive.scan(self.backend, self.root, self.model, scheduled=True)
+        listing.assert_not_called()
+        self.assertEqual(result["status"], "disabled")
+        self.assertEqual(self.calls, 0)
+
+    def test_pause_during_first_evaluation_stops_remaining_candidates(self):
+        self.enable()
+        second = copy.deepcopy(self.backend.thread)
+        second["id"] = "12345678-1234-1234-1234-123456789099"
+        rows = {ID: self.backend.thread, second["id"]: second}
+        self.backend.list_threads = lambda **kw: iter(copy.deepcopy(list(rows.values())))
+        self.backend.read = lambda tid: copy.deepcopy(rows[tid])
+        def model(context, **kwargs):
+            atomic_json(self.root / "archive/config.json", {"enabled": False})
+            return self.model(context)
+        result = self.scan(model)
+        self.assertEqual(self.calls, 1)
+        self.assertEqual(result["status"], "disabled")
+        self.assertFalse(result["enabled"])
+        self.assertFalse(result["candidates"])
+
+    def test_explicit_pause_also_stops_manual_preview(self):
+        def model(context, **kwargs):
+            atomic_json(self.root / "archive/config.json", {"enabled": False, "pause_revision": 1})
+            return self.model(context)
+        self.assertEqual(self.scan(model)["status"], "disabled")
+
+    def test_pause_or_archive_while_waiting_for_slot_never_starts_model(self):
+        from contextlib import contextmanager
+        from oil_codex_title import DEFAULTS
+        for change in ("pause", "archive"):
+            with self.subTest(change=change):
+                self.enable()
+                self.backend.archived = False
+                atomic_json(archive.record_path(self.root, ID), {})
+                @contextmanager
+                def queued(*args):
+                    if change == "pause":
+                        atomic_json(self.root / "archive/config.json", {"enabled": False})
+                    else:
+                        self.backend.archived = True
+                    yield True
+                def model(context, **kwargs):
+                    return archive.classify("unused", self.root, DEFAULTS, context, **kwargs)
+                with patch.object(archive, "worker_slot", queued), patch("codex_adapter.subprocess.run") as run:
+                    result = self.scan(model)
+                run.assert_not_called()
+                self.assertFalse(result["candidates"])
+
 
 
 if __name__ == "__main__":

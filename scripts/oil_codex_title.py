@@ -16,7 +16,7 @@ import time
 import unicodedata
 import uuid
 
-from codex_adapter import BackendError, CodexBackend, find_codex, generate_title, process_options
+from codex_adapter import BackendError, ModelSkipped, CodexBackend, find_codex, generate_title, process_options
 import file_lock
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -122,13 +122,23 @@ def worker_slot(root, limit, wait_seconds):
         time.sleep(min(0.1, max(0, deadline - time.monotonic())))
 
 
-def limited_title(binary, root, config, context):
+def limited_title(binary, root, config, context, *, before_model=None):
     deadline = time.monotonic() + config["model_timeout_seconds"]
     with worker_slot(root, config["max_parallel_workers"], config["model_timeout_seconds"]) as acquired:
         remaining = deadline - time.monotonic()
         if not acquired or remaining <= 0:
             raise BackendError("后台命名并发已满；本次保留原标题")
-        return generate_title(binary, {**config, "model_timeout_seconds": remaining}, context, ROOT)
+        return generate_title(binary, {**config, "model_timeout_seconds": remaining}, context, ROOT,
+                              before_model=before_model)
+
+
+def ensure_title_active(backend, thread_id, root):
+    if not load_config(root)["enabled"]:
+        raise ModelSkipped("disabled")
+    if read_json(state_path(root, thread_id)).get("locked"):
+        raise ModelSkipped("locked")
+    if backend.is_archived(thread_id):
+        raise ModelSkipped("archived")
 
 
 def read_settled_thread(backend, thread_id, event_turn, timeout=5):
@@ -333,12 +343,20 @@ def process_thread(backend, generator, thread_id, root, config, *, apply=False, 
             return {"status": "manual_title", "title": before["title"]}
         if state.get("last_fingerprint") == before["fingerprint"]:
             return {"status": "unchanged", "title": before["title"]}
-        candidate, usage = generator(before["context"])
+        try:
+            ensure_title_active(backend, thread_id, root)
+            candidate, usage = generator(before["context"])
+        except ModelSkipped as exc:
+            return {"status": exc.status}
         candidate = validate_candidate(candidate, before["title"])
         conflicts = conflicting_titles(root, thread_id, candidate["title"], before["scope_key"])
         if candidate["action"] == "rename" and conflicts:
-            candidate, retry_usage = generator({**before["context"], "conflicting_titles": conflicts,
-                "naming_feedback": "候选与已记录任务重名。用对话里真实的项目、模块或内容主题区分；无法区分就保留原名，不编造编号。"})
+            try:
+                ensure_title_active(backend, thread_id, root)
+                candidate, retry_usage = generator({**before["context"], "conflicting_titles": conflicts,
+                    "naming_feedback": "候选与已记录任务重名。用对话里真实的项目、模块或内容主题区分；无法区分就保留原名，不编造编号。"})
+            except ModelSkipped as exc:
+                return {"status": exc.status, "usage": usage}
             candidate = validate_candidate(candidate, before["title"])
             usage = {key: usage.get(key, 0) + retry_usage.get(key, 0)
                      for key in usage.keys() | retry_usage.keys()}
@@ -494,7 +512,8 @@ def main():
                         result = {"status": args.command, "title": state["last_seen_title"]}
                 else:
                     result = process_thread(
-                        backend, lambda context: limited_title(binary, root, config, context),
+                        backend, lambda context: limited_title(binary, root, config, context,
+                            before_model=lambda: ensure_title_active(backend, thread_id, root)),
                         thread_id, root, config, apply=is_hook or args.apply,
                         event_turn=turn_id if is_hook else None,
                     )

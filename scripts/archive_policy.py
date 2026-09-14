@@ -11,11 +11,13 @@ import re
 import sys
 import time
 
-from codex_adapter import BackendError, CodexBackend, find_codex, generate_json
+from codex_adapter import BackendError, ModelSkipped, CodexBackend, find_codex, generate_json
 from oil_codex_title import (ROOT, atomic_json, data_dir, load_config, read_json,
-                             snapshot, state_path, thread_lock, valid_id, worker_slot)
+                             item_text, project_hint, state_path, thread_lock, valid_id, worker_slot)
 
 DAY = 86400
+CONTEXT_VERSION = 2
+MAX_CONTEXT_CHARS = 12000
 POLICY = {"enabled": False, "completed_days": 14, "inactive_days": 30, "protected_ids": []}
 SCHEMA = {"type": "object", "additionalProperties": False, "properties": {
     "classification": {"type": "string", "enum": ["completed", "no_pending", "open", "uncertain"]},
@@ -100,6 +102,35 @@ def guards(root, now):
     return set(value["protected_ids"]) | ids, set(value["protected_projects"]) | projects
 
 
+def archive_context(thread):
+    """归档专用完整文本；超过预算就保留，不能遗漏中间或末尾的待办。"""
+    effective, original = [], ""
+    turns = thread.get("turns", [])
+    for index, turn in enumerate(turns):
+        messages = []
+        for item in turn.get("items", []):
+            kind = item.get("type")
+            if kind != "userMessage" and not (
+                kind == "agentMessage" and item.get("phase") in (None, "final_answer")
+            ):
+                continue
+            text = item_text(item)
+            if text:
+                role = "user" if kind == "userMessage" else "assistant"
+                messages.append({"role": role, "text": text})
+                if role == "user" and not original:
+                    original = text
+        if messages and index >= len(turns) - 5:
+            effective.append({"id": turn["id"], "messages": messages})
+    if not original:
+        return None
+    context = {"current_title": thread.get("name") or "", "project_hint": project_hint(thread),
+               "original_goal": original, "recent_turns": effective[-5:]}
+    if len(json.dumps(context, ensure_ascii=False)) > MAX_CONTEXT_CHARS:
+        return None
+    return context
+
+
 def activity(thread):
     """使用真实轮次时间和内容版本；标题与元数据更新时间不影响闲置时钟。"""
     turns = thread.get("turns", [])
@@ -111,8 +142,8 @@ def activity(thread):
     stamp = latest.get("completedAt") or latest.get("startedAt")
     if type(stamp) not in (float, int) or stamp <= 0:
         return None
-    context = snapshot(thread, {"recent_turns": 5, "max_context_chars": 12000})["context"]
-    if not context["recent_turns"]:
+    context = archive_context(thread)
+    if context is None:
         return None
     # 包括未截断的最近轮次，避免内容末尾变化未进入摘要时错误复用。
     encoded = json.dumps({"turns": turns[-5:]}, sort_keys=True, ensure_ascii=False)
@@ -137,25 +168,39 @@ def eligible(classification, age, cfg):
             or (classification == "no_pending" and age >= cfg["inactive_days"] * DAY))
 
 
-def classify(binary, root, config, context):
+def classify(binary, root, config, context, *, before_model=None):
     deadline = time.monotonic() + config["model_timeout_seconds"]
     with worker_slot(root, config["max_parallel_workers"], config["model_timeout_seconds"]) as acquired:
         remaining = deadline - time.monotonic()
         if not acquired or remaining <= 0:
             raise BackendError("模型并发已满，保留话题")
         return generate_json(binary, {**config, "model_timeout_seconds": remaining}, context,
-                             ROOT / "prompts/archiving.md", SCHEMA)
+                             ROOT / "prompts/archiving.md", SCHEMA, before_model=before_model)
 
 
-def scan(backend, root, classifier=None, max_evaluations=10):
+def scan(backend, root, classifier=None, max_evaluations=10, *, scheduled=False):
     """预览也持久化评估缓存；同一内容版本只尝试一次模型，失败不自动重试。"""
     now = time.time()
-    cfg, guard = policy(root), guards(root, now)
+    cfg = policy(root)
+    if scheduled and not cfg["enabled"]:
+        return {"status": "disabled", "enabled": False, "counts": {}, "candidates": []}
+    guard = guards(root, now)
+    def ensure_scan_active():
+        fresh = policy(root)
+        if ((scheduled or cfg["enabled"]) and not fresh["enabled"]
+                or fresh.get("pause_revision") != cfg.get("pause_revision")):
+            raise ModelSkipped("disabled")
+    stopped = False
     counts, candidates = Counter(), []
     with thread_lock(root / "archive", "scan") as acquired:
         if not acquired:
             return {"status": "busy"}
         for meta in backend.list_threads(archived=False):
+            try:
+                ensure_scan_active()
+            except ModelSkipped:
+                stopped = True
+                break
             tid = valid_id(meta["id"])
             counts["listed"] += 1
             state = read_json(record_path(root, tid))
@@ -182,19 +227,33 @@ def scan(backend, root, classifier=None, max_evaluations=10):
                     continue
                 if state.get("fingerprint") == fingerprint:
                     counts["cached"] += 1
+                    if state.get("context_version") != CONTEXT_VERSION:
+                        # 不复用旧截断摘要的正向结论，也不自动清缓存再次收费。
+                        counts["legacy_kept"] += 1
+                        continue
                 else:
                     if classifier is None or counts["model_attempts"] >= max_evaluations:
                         counts["awaiting_evaluation"] += 1
                         continue
-                    if backend.is_archived(tid, thread.get("cwd")):
-                        counts["archived"] += 1
-                        continue
+                    def before_model():
+                        ensure_scan_active()
+                        if backend.is_archived(tid, thread.get("cwd")):
+                            raise ModelSkipped("archived")
+                        fresh = backend.read(tid)
+                        fresh_info = activity(fresh)
+                        fresh_cfg = policy(root)
+                        if (protected(fresh, tid, fresh_cfg, guards(root, time.time()), root)
+                                or not fresh_info or fresh_info[1] != fingerprint):
+                            raise ModelSkipped("stale")
+                    before_model()
                     # 先落盘再调用，崩溃/异常不会导致下一次无界重试。
-                    state = {"fingerprint": fingerprint, "classification": "uncertain",
+                    state = {"fingerprint": fingerprint, "context_version": CONTEXT_VERSION,
+                             "classification": "uncertain",
                              "reason": "评估未完成，自动保留；需要时可显式重新评估", "evaluated_at": now}
                     atomic_json(record_path(root, tid), state)
                     counts["model_attempts"] += 1
-                    result, usage = classifier(context)
+                    result, usage = classifier(context, before_model=before_model)
+                    ensure_scan_active()
                     if (not isinstance(result, dict) or set(result) != {"classification", "reason"}
                             or result["classification"] not in SCHEMA["properties"]["classification"]["enum"]
                             or not isinstance(result["reason"], str)):
@@ -212,10 +271,16 @@ def scan(backend, root, classifier=None, max_evaluations=10):
                                        "idle_days": int(age / DAY), "reason": state["reason"]})
                 else:
                     counts["kept"] += 1
+            except ModelSkipped as exc:
+                if exc.status == "disabled":
+                    stopped = True
+                    break
+                counts[exc.status] += 1
             except (BackendError, ValueError, OSError):
                 counts["errors"] += 1
-        report = {"status": "preview", "created_at": now, "enabled": cfg["enabled"],
-                  "counts": dict(counts), "candidates": candidates}
+        report = {"status": "disabled" if stopped else "preview", "created_at": now,
+                  "enabled": policy(root)["enabled"],
+                  "counts": dict(counts), "candidates": [] if stopped else candidates}
         atomic_json(root / "archive/preview.json", report)
         return report
 
@@ -235,7 +300,7 @@ def check(backend, root, tid):
     if protected(thread, tid, cfg, guard, root) or info is None:
         return {"status": "protected"}
     stamp, fingerprint, _ = info
-    if (fingerprint != state.get("fingerprint")
+    if (state.get("context_version") != CONTEXT_VERSION or fingerprint != state.get("fingerprint")
             or not eligible(state.get("classification"), now - stamp, cfg)):
         return {"status": "not_eligible"}
     return {"status": "ready_to_archive", "id": tid, "title": thread.get("name") or ""}
@@ -266,6 +331,7 @@ def main():
     p = sub.add_parser("scan")
     p.add_argument("--live", action="store_true", help="允许独立模型评估新候选，消耗额度")
     p.add_argument("--limit", type=int, default=10)
+    p.add_argument("--scheduled", action="store_true", help="定时入口；归档开关关闭时不评估")
     for name in ("check", "record", "protect", "release"):
         sub.add_parser(name).add_argument("thread_id")
     for name in ("enable", "pause", "status"):
@@ -279,6 +345,8 @@ def main():
             cfg = policy(root)
             if args.command != "status":
                 cfg["enabled"] = args.command == "enable"
+                if args.command == "pause":
+                    cfg["pause_revision"] = time.time_ns()
                 atomic_json(root / "archive/config.json", cfg)
             result = {"config": cfg, "data_dir": str(root / "archive")}
         elif args.command in ("protect", "release"):
@@ -300,8 +368,8 @@ def main():
                 if args.command == "scan":
                     if not 0 <= args.limit <= 20:
                         raise ValueError("单次模型评估数量必须在 0～20 之间")
-                    fn = (lambda context: classify(binary, root, config, context)) if args.live else None
-                    result = scan(backend, root, fn, args.limit)
+                    fn = (lambda context, **kw: classify(binary, root, config, context, **kw)) if args.live else None
+                    result = scan(backend, root, fn, args.limit, scheduled=args.scheduled)
                 elif args.command == "check":
                     result = check(backend, root, args.thread_id)
                 else:
