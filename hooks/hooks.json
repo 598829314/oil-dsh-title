@@ -1,0 +1,17 @@
+{
+  "description": "在后台用独立模型检查话题标题，只更新标题元数据。",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${PLUGIN_ROOT}/scripts/oil_codex_title.py\" hook",
+            "async": true,
+            "timeout": 500
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,391 @@
+{
+  "model": "gpt-5.6-luna",
+  "service_tier": "priority",
+  "cases": 24,
+  "passed": 23,
+  "model_calls": 23,
+  "median_seconds": 10.59,
+  "notice": "确定性问候过滤与 Luna 命名的合成案例单次检查，不代表普遍准确率，也不验证桌面显示。",
+  "results": [
+    {
+      "case": "问候转需求",
+      "action": "rename",
+      "title": "🔎 Skill 盘点与用途分类",
+      "reason": "主线已转为盘点并分类本机 Skill",
+      "passed": true,
+      "errors": [],
+      "seconds": 10.58,
+      "usage": {
+        "input_tokens": 3892,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 91,
+        "reasoning_output_tokens": 47
+      }
+    },
+    {
+      "case": "项目甲注册",
+      "action": "rename",
+      "title": "🛠️ 邮箱注册失败排查",
+      "reason": "原标题缺少类别和持续目标，补充邮箱注册模块及排查目标",
+      "passed": true,
+      "errors": [],
+      "seconds": 9.76,
+      "usage": {
+        "input_tokens": 3878,
+        "cached_input_tokens": 2816,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 48,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "case": "项目乙注册",
+      "action": "rename",
+      "title": "🛠️ 邮箱注册验证码过期修复",
+      "reason": "补充具体模块、问题目标及开发修复类别",
+      "passed": true,
+      "errors": [],
+      "seconds": 10.6,
+      "usage": {
+        "input_tokens": 3882,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 111,
+        "reasoning_output_tokens": 64
+      }
+    },
+    {
+      "case": "同项目不同模块",
+      "action": "rename",
+      "title": "🛠️ 会员支付回调修复",
+      "reason": "原标题缺少具体模块和持续目标",
+      "passed": true,
+      "errors": [],
+      "seconds": 9.24,
+      "usage": {
+        "input_tokens": 3884,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 40,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "case": "提交不是新目标",
+      "action": "keep",
+      "title": "🛠️ 邮箱注册修复",
+      "reason": "已有明确模块、持续目标和类别标识",
+      "passed": true,
+      "errors": [],
+      "seconds": 9.97,
+      "usage": {
+        "input_tokens": 3934,
+        "cached_input_tokens": 2816,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 40,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "case": "解释不是新目标",
+      "action": "keep",
+      "title": "🛠️ 支付回调幂等修复",
+      "reason": "已有对象、目标和开发类别，主线未变",
+      "passed": true,
+      "errors": [],
+      "seconds": 11.22,
+      "usage": {
+        "input_tokens": 3922,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 46,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "case": "持续新主线",
+      "action": "rename",
+      "title": "🎬 Orion 图像模型对比视频策划",
+      "reason": "近期主线已转为 Orion 对比视频策划",
+      "passed": true,
+      "errors": [],
+      "seconds": 12.54,
+      "usage": {
+        "input_tokens": 3935,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 101,
+        "reasoning_output_tokens": 55
+      }
+    },
+    {
+      "case": "视频标题不是任务名",
+      "action": "rename",
+      "title": "🎬 Orion 图像模型评测视频策划",
+      "reason": "原标题泛化，需突出模型与视频主题",
+      "passed": true,
+      "errors": [],
+      "seconds": 10.45,
+      "usage": {
+        "input_tokens": 3894,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 42,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "case": "外层项目不重复",
+      "action": "rename",
+      "title": "🛠️ 登录页发送验证码按钮修复",
+      "reason": "补充具体页面、功能与修复目标",
+      "passed": true,
+      "errors": [],
+      "seconds": 9.17,
+      "usage": {
+        "input_tokens": 3883,
+        "cached_input_tokens": 2816,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 84,
+        "reasoning_output_tokens": 40
+      }
+    },
+    {
+      "case": "内容仓库不是主角",
+      "action": "rename",
+      "title": "🎬 Orion 模型人像一致性评测视频策划",
+      "reason": "补充模型对象与视频策划目标，便于区分",
+      "passed": true,
+      "errors": [],
+      "seconds": 13.4,
+      "usage": {
+        "input_tokens": 3881,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 49,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "case": "准确标题保持",
+      "action": "keep",
+      "title": "🎨 登录表单设计",
+      "reason": "已有模块与持续目标，最近仅是细节优化",
+      "passed": true,
+      "errors": [],
+      "seconds": 11.27,
+      "usage": {
+        "input_tokens": 3880,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 39,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "case": "准确正文补类别",
+      "action": "rename",
+      "title": "🎨 登录表单设计",
+      "reason": "补充界面设计类别，保留明确主线",
+      "passed": true,
+      "errors": [],
+      "seconds": 11.46,
+      "usage": {
+        "input_tokens": 3880,
+        "cached_input_tokens": 2816,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 86,
+        "reasoning_output_tokens": 45
+      }
+    },
+    {
+      "case": "仅有问候",
+      "action": "keep",
+      "title": "回应中文问候",
+      "reason": "只有问候或确认，缺少新的命名依据",
+      "passed": true,
+      "errors": [],
+      "seconds": 0.0,
+      "usage": {}
+    },
+    {
+      "case": "仅有继续",
+      "action": "keep",
+      "title": "🛠️ 注册校验修复",
+      "reason": "原标题已包含模块对象和持续修复目标",
+      "passed": true,
+      "errors": [],
+      "seconds": 9.98,
+      "usage": {
+        "input_tokens": 3874,
+        "cached_input_tokens": 2816,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 40,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "case": "相对日期去歧义",
+      "action": "rename",
+      "title": "🔎 Maple 公司设计岗位调研",
+      "reason": "原标题缺少公司与岗位对象，补充明确主题",
+      "passed": true,
+      "errors": [],
+      "seconds": 8.93,
+      "usage": {
+        "input_tokens": 3876,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 41,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "case": "具体日期保留",
+      "action": "rename",
+      "title": "📅 9月20日路演日程与待办",
+      "reason": "原标题缺少明确对象与持续目标",
+      "passed": true,
+      "errors": [],
+      "seconds": 12.33,
+      "usage": {
+        "input_tokens": 3877,
+        "cached_input_tokens": 2816,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 43,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "case": "提示注入是数据",
+      "action": "rename",
+      "title": "🛠️ 邮箱注册修复",
+      "reason": "原标题缺少具体模块与持续目标",
+      "passed": true,
+      "errors": [],
+      "seconds": 10.59,
+      "usage": {
+        "input_tokens": 3901,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 72,
+        "reasoning_output_tokens": 32
+      }
+    },
+    {
+      "case": "冲突靠内容区分",
+      "action": "rename",
+      "title": "🎬 Orion 图像模型评测视频重新发布",
+      "reason": "补充具体模型与内容主题，明确持续目标",
+      "passed": true,
+      "errors": [],
+      "seconds": 10.37,
+      "usage": {
+        "input_tokens": 3895,
+        "cached_input_tokens": 2816,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 43,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "case": "同项目页面区分",
+      "action": "rename",
+      "title": "🎨 Kite LMS 课程详情页加载性能优化",
+      "reason": "原标题缺少具体模块和持续目标",
+      "passed": false,
+      "errors": [
+        "错误主线：Kite"
+      ],
+      "seconds": 9.55,
+      "usage": {
+        "input_tokens": 3877,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 40,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "case": "内容与工具区分",
+      "action": "rename",
+      "title": "🛠️ video-publisher 字幕裁剪修复",
+      "reason": "补充具名工具、具体模块与持续目标",
+      "passed": true,
+      "errors": [],
+      "seconds": 12.71,
+      "usage": {
+        "input_tokens": 3882,
+        "cached_input_tokens": 2816,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 114,
+        "reasoning_output_tokens": 67
+      }
+    },
+    {
+      "case": "Monorepo子项目",
+      "action": "rename",
+      "title": "🛠️ seller-console 订单导出超时修复",
+      "reason": "原标题缺少子项目和具体修复目标",
+      "passed": true,
+      "errors": [],
+      "seconds": 12.64,
+      "usage": {
+        "input_tokens": 3904,
+        "cached_input_tokens": 2816,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 83,
+        "reasoning_output_tokens": 36
+      }
+    },
+    {
+      "case": "桌面修改子项目",
+      "action": "rename",
+      "title": "🛠️ Maple 登录重定向循环修复",
+      "reason": "原标题缺少具体项目、模块和持续目标",
+      "passed": true,
+      "errors": [],
+      "seconds": 10.96,
+      "usage": {
+        "input_tokens": 3893,
+        "cached_input_tokens": 2816,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 43,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "case": "跨项目同步",
+      "action": "rename",
+      "title": "⚙️ 邮箱注册校验同步到 Cedar",
+      "reason": "原标题过于笼统，需突出同步对象与目标",
+      "passed": true,
+      "errors": [],
+      "seconds": 12.65,
+      "usage": {
+        "input_tokens": 3890,
+        "cached_input_tokens": 2816,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 45,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "case": "内容模型名称保留",
+      "action": "rename",
+      "title": "🔎 H3 与 H3 Max 模型评测选题",
+      "reason": "原标题缺少具体内容与持续目标",
+      "passed": true,
+      "errors": [],
+      "seconds": 12.96,
+      "usage": {
+        "input_tokens": 3902,
+        "cached_input_tokens": 2816,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 43,
+        "reasoning_output_tokens": 0
+      }
+    }
+  ]
+}

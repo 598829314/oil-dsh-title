@@ -1,0 +1,13 @@
+{
+  "case": "同项目页面区分",
+  "action": "rename",
+  "title": "🎨 课程详情页加载性能优化",
+  "reason": "原标题缺少具体模块和持续目标",
+  "usage": {
+    "input_tokens": 3879,
+    "cached_input_tokens": 2816,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 38,
+    "reasoning_output_tokens": 0
+  }
+}

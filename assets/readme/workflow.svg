@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="260" viewBox="0 0 1200 260" role="img" aria-labelledby="title desc">
+  <title id="title">后台命名流程</title>
+  <desc id="desc">一轮对话结束后，读取最近三到五轮有效内容，交给独立的 Luna 模型判断。准确标题保留，变化的目标更新标题元数据。命名消息不会写入原对话。</desc>
+  <rect width="1200" height="260" rx="24" fill="#21382E"/>
+  <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,PingFang SC,sans-serif" fill="#F4F2EC">
+    <text x="56" y="60" font-size="24" fill="#A8C1B2">对话之外，维护标题</text>
+    <text x="56" y="140" font-size="36" font-weight="600">一轮结束</text>
+    <text x="420" y="140" font-size="36" font-weight="600">独立 Luna 判断</text>
+    <text x="884" y="140" font-size="36" font-weight="600">保留 / 更新</text>
+    <text x="56" y="196" font-size="24" fill="#B9CEC2">Stop Hook</text>
+    <text x="420" y="196" font-size="24" fill="#B9CEC2">最近 3～5 轮有效内容</text>
+    <text x="884" y="196" font-size="24" fill="#B9CEC2">只修改标题元数据</text>
+  </g>
+  <g stroke="#89B69C" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M265 128h96m-12-10 12 10-12 10"/>
+    <path d="M735 128h91m-12-10 12 10-12 10"/>
+  </g>
+</svg>
