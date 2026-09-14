@@ -33,6 +33,10 @@ class FakeBackend:
         self.thread = thread()
         self.writes = []
         self.raise_after_write = False
+        self.archived = False
+
+    def is_archived(self, thread_id, cwd=None):
+        return self.archived
 
     def read(self, thread_id):
         return copy.deepcopy(self.thread)
@@ -66,6 +70,19 @@ class TitleTests(unittest.TestCase):
         self.assertEqual(self.process()["status"], "preview")
         self.assertEqual(self.backend.thread, before)
         self.assertFalse(title.state_path(self.root, ID).exists())
+
+    def test_archived_thread_skips_model_even_for_old_hook(self):
+        self.backend.archived = True
+        self.assertEqual(self.process(lambda _: self.fail("归档话题不能调用模型"),
+                                      apply=True, event_turn=TURN)["status"], "archived")
+        self.assertEqual(self.backend.writes, [])
+
+    def test_archive_during_generation_discards_title(self):
+        def moved(context):
+            self.backend.archived = True
+            return proposal(context)
+        self.assertEqual(self.process(moved, apply=True)["status"], "archived")
+        self.assertEqual(self.backend.writes, [])
 
     def test_apply_renames_only_metadata_and_deduplicates(self):
         turns = copy.deepcopy(self.backend.thread["turns"])

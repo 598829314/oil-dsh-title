@@ -145,6 +145,33 @@ class CodexBackend:
     def rename(self, thread_id, title):
         return self.call("thread/name/set", {"threadId": thread_id, "name": title})
 
+    def list_threads(self, *, archived=False, cwd=None):
+        """分页读取官方列表，不将归档话题或遗漏页混入候选。"""
+        params = {"archived": archived, "limit": 100, "sourceKinds": ["cli", "vscode", "appServer", "exec"],
+                  "modelProviders": []}
+        if archived:
+            params["sourceKinds"] += ["unknown", "subAgent", "subAgentReview", "subAgentCompact",
+                                      "subAgentThreadSpawn", "subAgentOther"]
+        if cwd:
+            params["cwd"] = cwd
+        seen, cursors = set(), set()
+        while True:
+            page = self.call("thread/list", params)
+            for thread in page["data"]:
+                if thread["id"] not in seen:
+                    seen.add(thread["id"])
+                    yield thread
+            cursor = page.get("nextCursor")
+            if not cursor:
+                return
+            if cursor in cursors:
+                raise BackendError("话题列表分页游标重复；停止扫描")
+            cursors.add(cursor)
+            params["cursor"] = cursor
+
+    def is_archived(self, thread_id, cwd=None):
+        return any(t["id"] == thread_id for t in self.list_threads(archived=True, cwd=cwd))
+
     def __exit__(self, *_):
         if self.proc is None:
             return
@@ -196,13 +223,18 @@ def _generate_title_once(binary, config, context, plugin_root):
     if all(re.sub(r"[\W_]+", "", text).casefold() in trivial for text in user_texts):
         return {"action": "keep", "title": context.get("current_title", ""),
                 "reason": "只有问候或确认，缺少新的命名依据"}, {}
+    result, usage = generate_json(binary, config, context, plugin_root / "prompts/naming.md", SCHEMA)
+    return normalize_project_prefix(result, context), usage
+
+
+def generate_json(binary, config, context, policy, output_schema):
+    """隔离的无工具临时模型，供命名和归档评估共用。"""
     # 复用当前登录；不复制凭据，不恢复原会话，不保留独立会话记录。
     with tempfile.TemporaryDirectory(prefix="oil-codex-title-") as tmp:
         temp = Path(tmp)
         schema = temp / "schema.json"
-        schema.write_text(json.dumps(SCHEMA), encoding="utf-8")
+        schema.write_text(json.dumps(output_schema), encoding="utf-8")
         output = temp / "result.json"
-        policy = plugin_root / "prompts/naming.md"
         args = [
             binary, "exec", "--ephemeral", "--ignore-user-config",
             "--skip-git-repo-check", "--sandbox", "read-only", "-C", tmp,
@@ -238,7 +270,7 @@ def _generate_title_once(binary, config, context, plugin_root):
             item = event.get("item", {})
             if item.get("type") in {"command_execution", "mcp_tool_call", "web_search"}:
                 raise BackendError("命名模型尝试调用工具，本次结果已丢弃")
-        return normalize_project_prefix(result, context), usage
+        return result, usage
 
 
 def generate_title(binary, config, context, plugin_root):

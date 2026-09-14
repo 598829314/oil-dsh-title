@@ -298,6 +298,8 @@ def process_thread(backend, generator, thread_id, root, config, *, apply=False, 
             return {"status": "busy"}
         path = state_path(root, thread_id)
         state = read_json(path)
+        if backend.is_archived(thread_id):
+            return {"status": "archived"}
         if event_turn:
             thread, pending = read_settled_thread(backend, thread_id, event_turn)
             if pending:
@@ -352,6 +354,8 @@ def process_thread(backend, generator, thread_id, root, config, *, apply=False, 
         latest_state = read_json(path)
         if latest_state.get("locked"):
             return {"status": "locked"}
+        if backend.is_archived(thread_id):
+            return {"status": "archived"}
         after = snapshot(backend.read(thread_id), config)
         if after["title"] != before["title"] or after["fingerprint"] != before["fingerprint"]:
             return {"status": "stale_result"}
