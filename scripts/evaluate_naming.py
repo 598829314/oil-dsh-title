@@ -3,6 +3,7 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import json
+import re
 from pathlib import Path
 import statistics
 import time
@@ -15,15 +16,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--live', action='store_true', help='允许实际调用 Luna Fast')
     parser.add_argument('--output', type=Path, default=ROOT / 'docs/naming-evaluation.json')
+    parser.add_argument('--cases', type=Path, default=ROOT / 'tests/fixtures/naming_cases.json', help='合成案例文件，可单独评测语言等规则')
     parser.add_argument('--workers', type=int, default=4, choices=range(1,9))
     args = parser.parse_args()
-    cases = json.loads((ROOT / 'tests/fixtures/naming_cases.json').read_text(encoding="utf-8"))
+    cases = json.loads(args.cases.read_text(encoding="utf-8"))
     if not args.live:
         print(f'共 {len(cases)} 个合成案例；加 --live 才调用模型。')
         return
     binary = find_codex()
     def run(case):
         start = time.monotonic()
+        candidate, usage = None, {}
         try:
             candidate, usage = generate_title(binary, DEFAULTS, case['context'], ROOT)
             candidate = validate_candidate(candidate, case['context']['current_title'])
@@ -34,6 +37,8 @@ def main():
                 if word.casefold() not in candidate['title'].casefold(): errors.append('缺少对象：'+word)
             for word in expected['reject']:
                 if word.casefold() in candidate['title'].casefold(): errors.append('错误主线：'+word)
+            if expected.get('title_pattern') and not re.search(expected['title_pattern'], candidate['title']):
+                errors.append('标题语言或文字范围不符')
             if candidate['title'] in case['context'].get('conflicting_titles',[]): errors.append('未区分冲突')
             if expected.get('exact_title') and candidate['title'] != expected['exact_title']: errors.append('稳定标题或迁移主线变化')
             if expected.get('emoji') and not candidate['title'].startswith(expected['emoji']+' '): errors.append('产物类别不符')
@@ -42,7 +47,8 @@ def main():
             return {'case': case['id'], **candidate, 'passed': not errors, 'errors':errors,
                     'seconds':round(time.monotonic()-start,2),'usage':usage}
         except Exception as exc:
-            return {'case':case['id'],'passed':False,'errors':[str(exc)],'seconds':round(time.monotonic()-start,2)}
+            return {'case':case['id'],'passed':False,'errors':[str(exc)],
+                    'candidate':candidate,'usage':usage,'seconds':round(time.monotonic()-start,2)}
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         rows = list(pool.map(run,cases))
     report = {'model':DEFAULTS['model'],'service_tier':DEFAULTS['service_tier'],

@@ -65,6 +65,21 @@ class TitleTests(unittest.TestCase):
     def process(self, generator=proposal, **kwargs):
         return title.process_thread(self.backend, generator, ID, self.root, self.config, **kwargs)
 
+    def test_language_titles_survive_validation_write_and_readback(self):
+        for new_title in (
+            "🧩 Email verification｜Fix expiry",
+            "🎨 ログイン画面｜余白調整",
+            "🧩 Verificación｜Corregir caducidad",
+            "🧩 邮箱验证码｜过期修复",
+        ):
+            with self.subTest(title=new_title):
+                self.backend.thread["name"] = "待整理"
+                title.state_path(self.root, ID).unlink(missing_ok=True)
+                candidate = {"action": "rename", "title": new_title, "reason": "语言迁移"}
+                result = self.process(generator=lambda _: (candidate, {}), apply=True)
+                self.assertEqual(result["status"], "renamed")
+                self.assertEqual(self.backend.read(ID)["name"], new_title)
+
     def test_preview_never_changes_title_or_history(self):
         before = copy.deepcopy(self.backend.thread)
         self.assertEqual(self.process()["status"], "preview")

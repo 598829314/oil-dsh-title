@@ -1,0 +1,233 @@
+{
+  "model": "gpt-5.6-luna",
+  "service_tier": "priority",
+  "cases": 14,
+  "passed": 12,
+  "model_cases": 13,
+  "median_seconds": 18.39,
+  "notice": "确定性问候过滤与 Luna 命名的合成案例单次检查，不代表普遍准确率，也不验证桌面显示。",
+  "results": [
+    {
+      "case": "英文单轮需求",
+      "action": "rename",
+      "title": "🧩 Signup verification codes｜Fix expiry",
+      "reason": "The current title lacks the task’s concrete object and goal.",
+      "passed": true,
+      "errors": [],
+      "seconds": 18.99,
+      "usage": {
+        "input_tokens": 4486,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 126,
+        "reasoning_output_tokens": 82
+      }
+    },
+    {
+      "case": "中文旧标题迁移英文",
+      "action": "rename",
+      "title": "🧩 Email verification｜Fix expiry",
+      "reason": "Recent user requests are in English, so the accurate existing scope is migrated.",
+      "passed": true,
+      "errors": [],
+      "seconds": 15.51,
+      "usage": {
+        "input_tokens": 4552,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 110,
+        "reasoning_output_tokens": 64
+      }
+    },
+    {
+      "case": "英文旧标题迁移中文",
+      "action": "rename",
+      "title": "🧩 邮箱验证码｜过期修复",
+      "reason": "近期用户需求以中文为主，标题迁移为中文并保留原有主线。",
+      "passed": true,
+      "errors": [],
+      "seconds": 24.0,
+      "usage": {
+        "input_tokens": 4559,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 53,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "case": "英文请求中文助手",
+      "action": "rename",
+      "title": "🧩 Stripe webhooks｜Fix duplicate deliveries",
+      "reason": "明确 Stripe webhook 对象与重复投递修复目标，且符合近期英文需求",
+      "passed": true,
+      "errors": [],
+      "seconds": 30.09,
+      "usage": {
+        "input_tokens": 4622,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 110,
+        "reasoning_output_tokens": 59
+      }
+    },
+    {
+      "case": "英文请求长中文引用",
+      "action": "rename",
+      "title": "🧩 Stripe webhook｜Fix retries",
+      "reason": "Uses the user's English request and identifies the webhook retry fix.",
+      "passed": true,
+      "errors": [],
+      "seconds": 17.96,
+      "usage": {
+        "input_tokens": 5587,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 92,
+        "reasoning_output_tokens": 49
+      }
+    },
+    {
+      "case": "中文请求英文代码日志",
+      "action": "rename",
+      "title": "🧩 React 登录表单｜验证问题排查",
+      "reason": "原标题信息不足，依据用户需求补充具体对象与持续目标。",
+      "passed": true,
+      "errors": [],
+      "seconds": 15.28,
+      "usage": {
+        "input_tokens": 4995,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 127,
+        "reasoning_output_tokens": 77
+      }
+    },
+    {
+      "case": "英文用户翻译中文资料",
+      "action": "rename",
+      "title": "📝 Setup guide｜Translate to English",
+      "reason": "用户以英文提出翻译需求，原标题过于笼统，需明确文档对象与目标",
+      "passed": true,
+      "errors": [],
+      "seconds": 20.65,
+      "usage": {
+        "input_tokens": 4512,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 135,
+        "reasoning_output_tokens": 82
+      }
+    },
+    {
+      "case": "日文单轮需求",
+      "action": "rename",
+      "title": "🎨 ログイン画面｜余白と入力欄の配置改善",
+      "reason": "ログイン画面のレイアウト改善が主目的のため",
+      "passed": true,
+      "errors": [],
+      "seconds": 17.86,
+      "usage": {
+        "input_tokens": 4503,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 93,
+        "reasoning_output_tokens": 39
+      }
+    },
+    {
+      "case": "西班牙文单轮需求",
+      "passed": false,
+      "errors": [
+        "标题长度或空白无效"
+      ],
+      "seconds": 14.11
+    },
+    {
+      "case": "中文偶尔英文不切换",
+      "action": "keep",
+      "title": "🧩 邮箱验证码｜过期修复",
+      "reason": "原标题结构、对象、目标和主要语言均准确。",
+      "passed": true,
+      "errors": [],
+      "seconds": 15.96,
+      "usage": {
+        "input_tokens": 4557,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 44,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "case": "英文偶尔中文不切换",
+      "action": "keep",
+      "title": "🧩 Email verification｜Fix expiry",
+      "reason": "标题准确概括邮箱验证码过期修复主线，格式与对象保持稳定。",
+      "passed": true,
+      "errors": [],
+      "seconds": 17.86,
+      "usage": {
+        "input_tokens": 4546,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 101,
+        "reasoning_output_tokens": 51
+      }
+    },
+    {
+      "case": "英文不被早期中文目标覆盖",
+      "action": "rename",
+      "title": "🧩 Email verification codes｜Fix expiry",
+      "reason": "Recent user requests are consistently in English, so the accurate title is migrated.",
+      "passed": true,
+      "errors": [],
+      "seconds": 18.83,
+      "usage": {
+        "input_tokens": 4550,
+        "cached_input_tokens": 1792,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 109,
+        "reasoning_output_tokens": 62
+      }
+    },
+    {
+      "case": "中文混合技术名词",
+      "action": "rename",
+      "title": "🧩 clip-helper｜字幕面板空数据修复",
+      "reason": "明确具名工具与 React 字幕面板的崩溃修复目标",
+      "passed": true,
+      "errors": [],
+      "seconds": 21.28,
+      "usage": {
+        "input_tokens": 4514,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 52,
+        "reasoning_output_tokens": 0
+      }
+    },
+    {
+      "case": "英文语言均衡保持",
+      "action": "rename",
+      "title": "🧩 邮箱验证码｜过期边界测试",
+      "reason": "近期主要需求为中文，标题需迁移语言并保留邮箱验证码测试主线",
+      "passed": false,
+      "errors": [
+        "动作不符",
+        "缺少对象：verification",
+        "缺少对象：expir",
+        "标题语言或文字范围不符",
+        "稳定标题或迁移主线变化"
+      ],
+      "seconds": 20.12,
+      "usage": {
+        "input_tokens": 4523,
+        "cached_input_tokens": 3840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 105,
+        "reasoning_output_tokens": 51
+      }
+    }
+  ]
+}
