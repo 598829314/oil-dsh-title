@@ -90,7 +90,7 @@ class TitleTests(unittest.TestCase):
 
     def test_new_turn_during_model_discards_result(self):
         def moved(context):
-            self.backend.thread["turns"].append({"id": NEW_TURN, "items": []})
+            self.backend.thread["turns"].append({"id": NEW_TURN, "status": "completed", "items": []})
             return proposal(context)
         self.assertEqual(self.process(moved, apply=True)["status"], "stale_result")
         self.assertEqual(self.backend.writes, [])
@@ -111,7 +111,7 @@ class TitleTests(unittest.TestCase):
         ]
         def next_turn(context):
             self.backend.thread["name"] = "回应中文问候"
-            self.backend.thread["turns"].append({"id": NEW_TURN, "items": [
+            self.backend.thread["turns"].append({"id": NEW_TURN, "status": "completed", "items": [
                 {"type": "userMessage", "content": [{"type": "text", "text": "查看本地 Skill"}]}
             ]})
             return proposal(context)
@@ -339,6 +339,42 @@ class TitleTests(unittest.TestCase):
         with patch("codex_adapter._generate_title_once", return_value=(keep, {"input_tokens": 10})) as call, patch("codex_adapter.time.monotonic", side_effect=[0, 101]):
             generate_title("unused", {"model_timeout_seconds": 100}, {"current_title": "旧标题"}, ROOT)
         self.assertEqual(call.call_count, 1)
+
+    def test_global_worker_slots_limit_different_threads_and_release(self):
+        with title.worker_slot(self.root, 2, 0) as first:
+            with title.worker_slot(self.root, 2, 0) as second:
+                with title.worker_slot(self.root, 2, 0) as third:
+                    self.assertTrue(first)
+                    self.assertTrue(second)
+                    self.assertFalse(third)
+            with title.worker_slot(self.root, 2, 0) as available:
+                self.assertTrue(available)
+
+    def test_global_queue_exhaustion_never_calls_model(self):
+        from unittest.mock import patch
+        config = {**self.config, "max_parallel_workers": 1, "model_timeout_seconds": 0}
+        with title.worker_slot(self.root, 1, 0):
+            with patch.object(title, "generate_title") as call, self.assertRaises(BackendError):
+                title.limited_title("unused", self.root, config, {})
+        call.assert_not_called()
+
+    def test_stop_waits_for_completed_turn_instead_of_fixed_sleep(self):
+        from unittest.mock import patch
+        running = self.backend.read(ID)
+        running["turns"][-1]["status"] = "inProgress"
+        with patch.object(self.backend, "read", side_effect=[running, self.backend.thread]), patch.object(title.time, "sleep"):
+            settled, status = title.read_settled_thread(self.backend, ID, TURN)
+        self.assertIsNone(status)
+        self.assertEqual(settled["turns"][-1]["status"], "completed")
+
+    def test_unsettled_or_interrupted_turn_never_generates(self):
+        from unittest.mock import patch
+        self.backend.thread["turns"][-1]["status"] = "interrupted"
+        self.assertEqual(self.process(lambda _:self.fail(), apply=True,event_turn=TURN)["status"], "unfinished_turn")
+        self.backend.thread["turns"][-1]["status"] = "inProgress"
+        with patch.object(title.time, "monotonic", side_effect=[0, 6]):
+            _, status = title.read_settled_thread(self.backend, ID, TURN)
+        self.assertEqual(status, "turn_not_settled")
 
     def test_config_merges_unknown_fields(self):
         title.atomic_json(self.root / "config.json", {"model": "custom-model", "future": "preserved"})

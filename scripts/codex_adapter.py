@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import queue
+import platform
 import re
 import shutil
 import subprocess
@@ -18,11 +19,38 @@ class BackendError(RuntimeError):
     pass
 
 
+def process_options():
+    # 隐藏后台 Codex 子进程的控制台窗口；不通过 shell 执行模型参数。
+    return {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}
+
+
+def windows_binary(path):
+    """将标准 npm 的 cmd 入口解析为原生 exe，避免经 cmd.exe 转义 JSON 参数。"""
+    entry = Path(path)
+    if entry.suffix.lower() == ".exe":
+        return str(entry)
+    if entry.suffix.lower() not in (".cmd", ".bat"):
+        raise BackendError("Windows 需要原生 codex.exe；请通过 configure --codex-bin 指定路径")
+    arch = "arm64" if platform.machine().lower() in ("arm64", "aarch64") else "x64"
+    target = "aarch64-pc-windows-msvc" if arch == "arm64" else "x86_64-pc-windows-msvc"
+    package = (entry.parent / "node_modules/@openai/codex").resolve()
+    roots = [package, package / "node_modules/@openai" / ("codex-win32-" + arch),
+             entry.parent / "node_modules/@openai" / ("codex-win32-" + arch)]
+    # 兼容 pnpm 链接后的包根目录以及 npm 的可选依赖布局。
+    roots.extend(parent / ("codex-win32-" + arch) for parent in package.parents)
+    for root in roots:
+        for folder in ("bin", "codex"):
+            candidate = root / "vendor" / target / folder / "codex.exe"
+            if candidate.is_file():
+                return str(candidate)
+    raise BackendError("未找到 npm 入口对应的 codex.exe；请重装 Codex CLI 或通过 configure --codex-bin 指定原生路径")
+
+
 def find_codex(explicit: str | None = None) -> str:
     if explicit:
         resolved = shutil.which(explicit)
         if resolved:
-            return resolved
+            return windows_binary(resolved) if sys.platform == "win32" else resolved
         raise BackendError("配置的 Codex 可执行文件不存在")
     if sys.platform == "darwin":
         for base in (Path("/Applications"), Path.home() / "Applications"):
@@ -30,6 +58,11 @@ def find_codex(explicit: str | None = None) -> str:
                 candidate = base / app / "Contents/Resources/codex"
                 if candidate.is_file() and os.access(candidate, os.X_OK):
                     return str(candidate)
+    if sys.platform == "win32":
+        path = shutil.which("codex.exe") or shutil.which("codex")
+        if path:
+            return windows_binary(path)
+        raise BackendError("未找到 Windows Codex CLI；请将 codex.exe 加入 PATH，或通过 configure --codex-bin 指定路径")
     path = shutil.which("codex")
     if not path:
         raise BackendError("未找到 Codex；请安装并登录，或配置 codex_bin")
@@ -58,7 +91,7 @@ class CodexBackend:
         self.proc = subprocess.Popen(
             [self.binary, "app-server"] + (["--disable", "hooks"] if self.disable_hooks else []),
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-            encoding="utf-8", env=worker_env(),
+            encoding="utf-8", env=worker_env(), **process_options(),
         )
         threading.Thread(target=self._reader, daemon=True).start()
         try:
@@ -187,8 +220,8 @@ def _generate_title_once(binary, config, context, plugin_root):
             args[2:2] = ["-c", "service_tier=" + json.dumps(config["service_tier"])]
         try:
             proc = subprocess.run(args, input=json.dumps(context, ensure_ascii=False),
-                                  capture_output=True, encoding="utf-8", env=worker_env(),
-                                  timeout=config["model_timeout_seconds"])
+                                  capture_output=True, encoding="utf-8", env=worker_env(), **process_options(),
+                                  timeout=config["model_timeout_seconds"], **process_options())
         except subprocess.TimeoutExpired as exc:
             raise BackendError("独立命名模型超时；原标题保留") from exc
         if proc.returncode or not output.exists():

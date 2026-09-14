@@ -16,7 +16,8 @@ import time
 import unicodedata
 import uuid
 
-from codex_adapter import BackendError, CodexBackend, find_codex, generate_title
+from codex_adapter import BackendError, CodexBackend, find_codex, generate_title, process_options
+import file_lock
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULTS = {
@@ -27,6 +28,7 @@ DEFAULTS = {
     "recent_turns": 5,
     "max_context_chars": 14000,
     "model_timeout_seconds": 100,
+    "max_parallel_workers": 2,
 }
 EMOJI = ("🎬", "🧩", "🔎", "📝", "📅", "🎨", "⚙️", "💬")
 POLICY_VERSION = 6
@@ -68,7 +70,7 @@ def load_config(root):
     if not isinstance(config["enabled"], bool):
         raise ValueError("enabled 必须是布尔值")
     for key, lower, upper in (("recent_turns", 3, 5), ("max_context_chars", 3000, 20000),
-                              ("model_timeout_seconds", 10, 110)):
+                              ("model_timeout_seconds", 10, 110), ("max_parallel_workers", 1, 8)):
         if type(config[key]) is not int or not lower <= config[key] <= upper:
             raise ValueError(f"{key} 必须在 {lower}～{upper} 之间")
     if not isinstance(config["model"], str) or not config["model"].strip():
@@ -85,16 +87,13 @@ def valid_id(value):
 @contextmanager
 def thread_lock(root, thread_id, wait_seconds=0):
     # 内核锁在进程结束后释放，避免崩溃留下永久锁或两个 Worker 覆盖结果。
-    if sys.platform == "win32":
-        raise BackendError("当前后台实现尚未支持 Windows 文件锁")
-    import fcntl
     path = root / "locks" / (thread_id + ".lock")
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as stream:
+    with path.open("a+b") as stream:
         deadline = time.monotonic() + wait_seconds
         while True:
             try:
-                fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                file_lock.acquire(stream)
                 break
             except BlockingIOError:
                 if time.monotonic() >= deadline:
@@ -104,7 +103,50 @@ def thread_lock(root, thread_id, wait_seconds=0):
         try:
             yield True
         finally:
-            fcntl.flock(stream, fcntl.LOCK_UN)
+            file_lock.release(stream)
+
+
+@contextmanager
+def worker_slot(root, limit, wait_seconds):
+    """不同话题共享进程池配额，等待时间算入模型预算。"""
+    deadline = time.monotonic() + wait_seconds
+    while True:
+        for index in range(limit):
+            with thread_lock(root / "worker-pool", str(index)) as acquired:
+                if acquired:
+                    yield True
+                    return
+        if time.monotonic() >= deadline:
+            yield False
+            return
+        time.sleep(min(0.1, max(0, deadline - time.monotonic())))
+
+
+def limited_title(binary, root, config, context):
+    deadline = time.monotonic() + config["model_timeout_seconds"]
+    with worker_slot(root, config["max_parallel_workers"], config["model_timeout_seconds"]) as acquired:
+        remaining = deadline - time.monotonic()
+        if not acquired or remaining <= 0:
+            raise BackendError("后台命名并发已满；本次保留原标题")
+        return generate_title(binary, {**config, "model_timeout_seconds": remaining}, context, ROOT)
+
+
+def read_settled_thread(backend, thread_id, event_turn, timeout=5):
+    """确认 Stop 对应轮次已完成；异步保存尚未完成时短暂轮询。"""
+    deadline = time.monotonic() + timeout
+    while True:
+        thread = backend.read(thread_id)
+        turns = thread.get("turns", [])
+        if not turns or turns[-1]["id"] != event_turn:
+            return thread, "outdated_event"
+        status = turns[-1].get("status")
+        if status == "completed":
+            return thread, None
+        if status in ("failed", "interrupted"):
+            return thread, "unfinished_turn"
+        if time.monotonic() >= deadline:
+            return thread, "turn_not_settled"
+        time.sleep(min(0.1, max(0, deadline - time.monotonic())))
 
 
 def state_path(root, thread_id):
@@ -239,6 +281,8 @@ def validate_candidate(candidate, current_title):
             raise ValueError("标题正文无效或包含多个类别 emoji")
         if any(unicodedata.category(c).startswith("C") for c in title):
             raise ValueError("标题含控制字符")
+        if re.search(r"[A-Za-z]:[\\/]|\\\\", title):
+            raise ValueError("标题含 Windows 绝对路径")
         if any(x in title for x in ("\n", "\r", "`", "https://", "http://", "@", "/Users/", "sk-")):
             raise ValueError("标题含不允许的格式或私人信息")
     return {**candidate, "reason": candidate["reason"][:300]}
@@ -254,9 +298,13 @@ def process_thread(backend, generator, thread_id, root, config, *, apply=False, 
             return {"status": "busy"}
         path = state_path(root, thread_id)
         state = read_json(path)
-        before = snapshot(backend.read(thread_id), config)
-        if event_turn and before["latest_id"] != event_turn:
-            return {"status": "outdated_event"}
+        if event_turn:
+            thread, pending = read_settled_thread(backend, thread_id, event_turn)
+            if pending:
+                return {"status": pending}
+        else:
+            thread = backend.read(thread_id)
+        before = snapshot(thread, config)
         if not before["has_messages"]:
             return {"status": "empty"}
         # 上次写入后进程被中断时，先核对待确认结果，避免误认作手工改名。
@@ -334,7 +382,7 @@ def process_thread(backend, generator, thread_id, root, config, *, apply=False, 
 
 
 def doctor(binary, root, config, thread_id=None):
-    version = subprocess.run([binary, "--version"], capture_output=True, text=True, timeout=10)
+    version = subprocess.run([binary, "--version"], capture_output=True, encoding="utf-8", timeout=10, **process_options())
     output = {"codex_bin": binary, "version": version.stdout.strip(), "config": config,
               "data_dir": str(root), "desktop_display": "not_verified"}
     # 仅检查定义，不创建或恢复任何会话，因此不会触发 SessionStart/Stop。
@@ -363,6 +411,10 @@ def doctor(binary, root, config, thread_id=None):
 
 
 def main():
+    # Hook 事件使用 UTF-8；不能依赖 Windows 当前代码页解释中文内容。
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description="独立模型驱动的 Codex 话题命名")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("hook", help="读取 Stop Hook stdin；保持宿主输出为空 JSON")
@@ -396,8 +448,6 @@ def main():
                 return 0
             thread_id = valid_id(event["session_id"])
             turn_id = valid_id(event["turn_id"])
-            # 等待本轮最终回答落盘，过期事件由 process_thread 丢弃。
-            time.sleep(1)
         if args.command in ("pause", "resume", "configure"):
             config_path = root / "config.json"
             changes = read_json(config_path)
@@ -440,7 +490,7 @@ def main():
                         result = {"status": args.command, "title": state["last_seen_title"]}
                 else:
                     result = process_thread(
-                        backend, lambda context: generate_title(binary, config, context, ROOT),
+                        backend, lambda context: limited_title(binary, root, config, context),
                         thread_id, root, config, apply=is_hook or args.apply,
                         event_turn=turn_id if is_hook else None,
                     )

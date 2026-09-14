@@ -2,7 +2,7 @@
 name: oil-codex-title
 description: 管理 oil-codex-title 插件的 Codex 话题自动命名，检查后台 Hook、配置独立模型、预览或修改话题标题、暂停恢复和锁定标题。当用户要求管理 Codex 话题名称或配置本插件时使用；不用于文章标题、视频标题、文件重命名，也不在普通对话结束时由主 Agent 主动执行。
 metadata:
-  compatibility: Codex 本地插件专用；需要 Python 3.10+、已登录且支持当前话题存储的 Codex CLI。macOS 已实测；Linux 未实测，Windows 和云端不支持后台入口。
+  compatibility: Codex 本地插件专用；需要 Python 3.10+、已登录且支持当前话题存储的 Codex CLI。macOS 已实测；Windows 与 Linux 已适配、待跨平台验收，云端不支持后台入口。
 ---
 
 # oil-codex-title
@@ -16,6 +16,8 @@ metadata:
 下面的 `<入口>` 表示该脚本的绝对路径，`<话题 ID>` 来自用户引用或宿主读取结果，不能猜测。
 
 ## 检查与配置
+
+Windows 下将示例的 `python3` 换成 `py -3`，需要已安装 Python Launcher。Windows 启动与 CLI 路径说明见插件根目录 `docs/Windows安装与验证.md`。
 
 1. 执行 `python3 <入口> doctor`，检查 Python、Codex 路径和 App Server。
 2. 用户提供话题时，追加 `--thread <话题 ID>` 验证读取兼容性。

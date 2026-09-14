@@ -17,7 +17,7 @@ def main():
     parser.add_argument('--output', type=Path, default=ROOT / 'docs/naming-evaluation.json')
     parser.add_argument('--workers', type=int, default=4, choices=range(1,9))
     args = parser.parse_args()
-    cases = json.loads((ROOT / 'tests/fixtures/naming_cases.json').read_text())
+    cases = json.loads((ROOT / 'tests/fixtures/naming_cases.json').read_text(encoding="utf-8"))
     if not args.live:
         print(f'共 {len(cases)} 个合成案例；加 --live 才调用模型。')
         return
@@ -52,7 +52,7 @@ def main():
               'notice':'确定性问候过滤与 Luna 命名的合成案例单次检查，不代表普遍准确率，也不验证桌面显示。',
               'results':rows}
     args.output.parent.mkdir(parents=True,exist_ok=True)
-    args.output.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+    args.output.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n', encoding='utf-8')
     print(json.dumps({k:v for k,v in report.items() if k!='results'},ensure_ascii=False))
     for row in rows:
         print(json.dumps({k:v for k,v in row.items() if k!='usage'},ensure_ascii=False))
