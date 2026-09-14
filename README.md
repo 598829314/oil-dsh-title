@@ -1,7 +1,7 @@
 # oil-codex-title
 
 <p align="center">
-  <img src="./assets/readme/hero.svg" width="100%" alt="Codex 话题实时命名，更好区分。对比普通标题与带 emoji 的具体任务标题。">
+  <img src="./assets/readme/hero.svg" width="840" alt="Codex 话题实时命名，更好区分。对比普通标题与带 emoji 的具体任务标题。">
 </p>
 
 一个 Codex 本地插件：每轮对话结束后，用独立的 **Luna Fast** 判断是否更新任务标题。参考最近 3～5 轮有效对话，让侧边栏里留下“哪个对象、正在做什么”。
