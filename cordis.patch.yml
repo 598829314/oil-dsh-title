@@ -1,0 +1,6 @@
+# Oil DSH Title bundle: observe all live sessions and update titles through
+# the official sessionTitle.rename() API. The built-in first-prompt provider
+# remains enabled; this plugin does not replace or disable DSH core rows.
+- insert:
+    - id: oil-dsh-title
+      name: oil-dsh-title

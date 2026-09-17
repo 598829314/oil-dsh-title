@@ -1,51 +1,62 @@
-# oil-codex-title
+# oil-dsh-title
 
-<p align="center">
-  <img src="./assets/readme/hero.svg" width="840" alt="Codex 话题实时命名，更好区分。对比普通标题与带 emoji 的具体任务标题。">
-</p>
+A DeepSeek Harness plugin that keeps session titles useful as the work evolves.
+It adapts the naming rules from [oil-codex-title](https://github.com/oil-oil/oil-codex-title) to DSH's official session APIs.
 
-让 Codex 的话题标题跟上你正在做的事情。每轮对话结束后，自动参考最近 3～5 轮内容更新标题，话题再多，也更容易找到。
+## Install
 
-## 一眼看出正在做什么
+From the DSH Market, search for **Oil DSH Title** and install it. The command-line equivalent is:
 
-以下为命名效果示例：
-
-| 原来的标题 | 更容易找回的标题 |
-| --- | --- |
-| 回应中文问候 | 🧩 邮箱验证码｜过期排查 |
-| 确认注册功能 | 🧩 支付回调｜重复发货修复 |
-| 讨论视频标题 | 🎬 图像模型评测｜视频策划 |
-| 继续修改 | 🎨 登录表单｜布局优化 |
-
-统一采用 **「类别 emoji + 对象｜目标」**，先找对象，再看正在做什么。
-
-- **对象在前**：把“CRT 转场”“登录表单”等辨识词放到前面，默认省略外层已有的项目名。
-- **类别固定**：🎬 内容制作、🧩 工具开发、🔎 对比调研、🎨 页面设计、📝 方法整理。同一个视频进入修改阶段，也不会因此换成开发图标。
-- **名称稳定**：准确的对象名称尽量不变；旧标题整理一次，之后只在工作目标实质变化时更新；“继续”“推送”不会取代主线。
-- **不打断对话**：独立的 Luna Fast 在后台命名，不往原对话里添加消息。
-- **跟随你的语言**：根据最近几轮用户消息的主要语言命名，保留产品名；偶尔一句外语不会让标题来回切换。例如：🧩 Email verification｜Fix expiry。
-- **由你控制**：可以预览新标题、固定喜欢的名称，也可以随时暂停或恢复自动命名。
-- **可选闲置归档**：定期收起长期未聊、已经完成的话题，保护置顶与待办。先预览再开启；已归档话题不再参与模型评估，相同内容也不会每天重复判断。
-
-## 让 Codex 帮你安装
-
-复制下面这段话发给 Codex：
-
-```text
-帮我查找 GitHub 仓库 oil-oil/oil-codex-title，下载并安装完整插件，开启话题自动命名并检查是否生效。需要我在界面中确认的步骤，请告诉我怎么操作。
+```sh
+dsh plugin --profile web add oil-dsh-title
 ```
 
-安装后，在新话题里正常聊天即可。默认使用 Luna Fast，消耗当前 Codex 账号的模型额度。
+Use `--profile desktop` when managing a desktop profile directly.
 
-## 日常怎么用
+After installation, send a substantive user prompt in any live session. The title is updated asynchronously after the request route is known.
 
-直接对 Codex 说：
+## Title format
 
-- “预览这个话题的新标题。”
-- “固定这个话题的标题。”
-- “暂停自动命名。” / “恢复自动命名。”
-- “预览可以归档的闲置话题。” / “每天帮我整理闲置话题。”
+Titles use:
 
-目前为**预览版**，macOS 已实测，Windows 与 Linux 已通过自动化测试，桌面完整流程仍待实测；云端暂不支持。部分桌面版本的置顶列表可能仍显示旧标题，可让 Codex“检查真实标题并同步桌面显示”。
+```text
+category emoji + object｜ongoing goal
+```
 
-[详细使用与数据说明](docs/使用与边界.md) · [归档规则](docs/归档工作流.md) · [兼容性与验证记录](docs/发布验收.md) · [MIT 许可证](LICENSE)
+Examples:
+
+- `🧩 session-title｜event listener verification`
+- `🎨 login form｜layout refinement`
+- `🔎 model benchmark｜accuracy comparison`
+
+The plugin considers the latest user messages, keeps the dominant language, preserves product and code names, avoids repeating the workspace hint, and avoids known title conflicts. It keeps a stable title when the work has not materially changed.
+
+## DSH integration
+
+This is a host-only Cordis bundle. It listens to `session/event` for all live sessions and updates titles with the official `sessionTitle.rename()` API.
+
+It deliberately does **not** call `sessionTitle.register()` and does not disable DSH's built-in first-prompt provider. That makes it safe to install alongside the default title stack and avoids modifying DSH core files.
+
+The plugin sends only a bounded title-generation input to the selected session route:
+
+- the latest five user messages, each capped at 600 characters;
+- the current title;
+- a workspace leaf-name hint, never the full path;
+- a bounded list of other live session titles.
+
+It does not append a naming message to the conversation. Model failures, invalid output, timeouts, and title conflicts leave the current title unchanged.
+
+## Development
+
+```sh
+npm test
+npm run check
+```
+
+The tests cover title structure validation, privacy rejection, JSON parsing, mixed-language-safe normalization, and both `text-delta` and `block-end` LLM stream output.
+
+## Attribution and license
+
+Naming policy and the original Codex implementation: [oil-oil/oil-codex-title](https://github.com/oil-oil/oil-codex-title).
+
+This DSH adaptation is released under the MIT License.
