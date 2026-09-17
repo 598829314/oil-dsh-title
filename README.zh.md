@@ -4,10 +4,10 @@
 
 ## 安装
 
-在 DSH Market 中搜索 **Oil DSH Title** 并安装。命令行等价方式：
+在 DSH Market 中搜索 **Oil DSH Title** 并安装。命令行直装 GitHub Release 的方式：
 
 ```sh
-dsh plugin --profile web add oil-dsh-title
+dsh plugin --profile web add https://github.com/598829314/oil-dsh-title/releases/latest/download/oil-dsh-title.tgz
 ```
 
 直接管理桌面 profile 时使用 `--profile desktop`。

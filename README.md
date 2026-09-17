@@ -5,10 +5,10 @@ It adapts the naming rules from [oil-codex-title](https://github.com/oil-oil/oil
 
 ## Install
 
-From the DSH Market, search for **Oil DSH Title** and install it. The command-line equivalent is:
+From the DSH Market, search for **Oil DSH Title** and install it. The direct GitHub Release equivalent is:
 
 ```sh
-dsh plugin --profile web add oil-dsh-title
+dsh plugin --profile web add https://github.com/598829314/oil-dsh-title/releases/latest/download/oil-dsh-title.tgz
 ```
 
 Use `--profile desktop` when managing a desktop profile directly.
