@@ -10,7 +10,11 @@
 dsh plugin --profile web add https://github.com/598829314/oil-dsh-title/releases/latest/download/oil-dsh-title.tgz
 ```
 
-直接管理桌面 profile 时使用 `--profile desktop`。
+直接管理桌面 profile 时使用 `--profile desktop`。如果已有 profile 因锁文件策略拒绝远程 tarball，可改用 GitHub 源：
+
+```sh
+dsh plugin --profile desktop add github:598829314/oil-dsh-title
+```
 
 安装后，在任意在线会话中发送一条具体任务；插件会在拿到本轮模型路由后异步更新标题。
 

@@ -1,7 +1,7 @@
 {
   "name": "oil-dsh-title",
   "displayName": "Oil DSH Title",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Automatically maintains stable emoji session titles for DeepSeek Harness from recent user prompts.",
   "author": "G_QMark",
   "contributors": [

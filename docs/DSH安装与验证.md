@@ -8,10 +8,10 @@
 dsh plugin --profile web add https://github.com/598829314/oil-dsh-title/releases/latest/download/oil-dsh-title.tgz
 ```
 
-桌面 profile 使用：
+已有 profile 若因远程 tarball 的锁文件策略失败，可直接固定 GitHub 源：
 
 ```sh
-dsh plugin --profile desktop add oil-dsh-title
+dsh plugin --profile desktop add github:598829314/oil-dsh-title
 ```
 
 安装后按宿主提示刷新页面或重启。插件的 bundle patch 会插入 `oil-dsh-title` Cordis 行。

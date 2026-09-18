@@ -11,7 +11,11 @@ From the DSH Market, search for **Oil DSH Title** and install it. The direct Git
 dsh plugin --profile web add https://github.com/598829314/oil-dsh-title/releases/latest/download/oil-dsh-title.tgz
 ```
 
-Use `--profile desktop` when managing a desktop profile directly.
+Use `--profile desktop` when managing a desktop profile directly. If an existing profile rejects the remote tarball because of its lockfile policy, use the GitHub source instead:
+
+```sh
+dsh plugin --profile desktop add github:598829314/oil-dsh-title
+```
 
 After installation, send a substantive user prompt in any live session. The title is updated asynchronously after the request route is known.
 
