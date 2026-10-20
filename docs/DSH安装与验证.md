@@ -16,6 +16,19 @@ dsh plugin --profile desktop add github:598829314/oil-dsh-title
 
 安装后按宿主提示刷新页面或重启。插件的 bundle patch 会插入 `oil-dsh-title` Cordis 行。
 
+## 兼容版本
+
+DSH 0.2.x 的插件管理器会按 `peerDependencies` 做安装期版本门禁：声明不覆盖当前 `dsh` 版本时会整体回滚安装，并提示 `installation rejected ... incompatible with dsh <version>`。
+
+本插件的 peer 声明使用范围形式，已覆盖：
+
+| dsh | 说明 |
+| --- | --- |
+| `0.1.2-rc.1` | 最初声明版本 |
+| `0.2.1-rc.2` | 已验证：`sessions.list` / `session.snapshotEvents` / `session.requestHeader` / `ctx.llm.stream` / `sessionTitle.get` / `sessionTitle.rename` 签名一致 |
+
+上界设为 `<0.3.0`：0.3.x 尚未验证，应由后续提交重新确认后再放开，而不是静默放行。`test/compat.test.mjs` 会持续检查 `0.1.2-rc.1` 与 `0.2.1-rc.2` 仍落在范围内。
+
 ## 验证路径
 
 按四层检查，不把其中一层当成全部证据：
